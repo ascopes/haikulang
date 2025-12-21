@@ -1,0 +1,15 @@
+[package]
+name = "haikulang-parser"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+test-case.workspace = true
+
+[lib]
+
+[lints]
+workspace = true
