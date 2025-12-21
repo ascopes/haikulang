@@ -1,0 +1,16 @@
+[workspace]
+members = ["haikulang_parser"]
+resolver = "3"
+
+[workspace.dependencies]
+test-case = "3.3.1"
+
+[workspace.package]
+authors = ["Ashley Scopes <73482956+ascopes@users.noreply.github.com>"]
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/ascopes/haikulang"
+version = "0.0.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
