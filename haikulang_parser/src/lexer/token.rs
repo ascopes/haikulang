@@ -1,4 +1,4 @@
-use crate::location::Location;
+use super::location::Location;
 
 #[derive(Debug, PartialEq)]
 pub enum TokenType {
@@ -7,8 +7,7 @@ pub enum TokenType {
     // Literals
     Ident,
     String,
-    Int,
-    Float,
+    Number,
 
     // Operators
     Add,
