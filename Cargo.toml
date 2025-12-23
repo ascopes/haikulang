@@ -1,5 +1,8 @@
 [workspace]
-members = ["haikulang_parser"]
+members = [
+    "haikulang_lexer",
+    "haikulang_parser",
+]
 resolver = "3"
 
 [workspace.dependencies]

@@ -1,4 +1,4 @@
-use super::location::Location;
+use crate::location::Location;
 
 #[derive(Debug, PartialEq)]
 pub enum TokenType {

@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
-use crate::lexer::token::{Token, TokenType};
-use super::location::Location;
+use crate::token::{Token, TokenType};
+use crate::location::Location;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
