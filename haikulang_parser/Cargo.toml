@@ -1,5 +1,5 @@
 [package]
-name = "haikulang-parser"
+name = "haikulang_parser"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

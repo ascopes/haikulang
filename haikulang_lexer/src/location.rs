@@ -11,7 +11,11 @@ pub struct Location {
 
 impl Default for Location {
     fn default() -> Self {
-        Self { offset: 0, line: 1, column: 1 }
+        Self {
+            offset: 0,
+            line: 1,
+            column: 1,
+        }
     }
 }
 
@@ -29,7 +33,11 @@ mod tests {
     #[test]
     fn default_has_expected_value() {
         // Given
-        let expected_location = Location{offset: 0, line: 1, column: 1};
+        let expected_location = Location {
+            offset: 0,
+            line: 1,
+            column: 1,
+        };
 
         // When
         let location = Location::default();
@@ -40,9 +48,18 @@ mod tests {
 
     #[test_case(0, 1, 2, "1:2")]
     #[test_case(67, 420, 69, "420:69")]
-    fn display_is_formatted_as_expected(input_offset: Position, input_line: Position, input_column: Position, expected: &str) {
+    fn display_is_formatted_as_expected(
+        input_offset: Position,
+        input_line: Position,
+        input_column: Position,
+        expected: &str,
+    ) {
         // Given
-        let location = Location{offset: input_offset, line: input_line, column: input_column};
+        let location = Location {
+            offset: input_offset,
+            line: input_line,
+            column: input_column,
+        };
 
         // Then
         assert_eq!(expected, location.to_string());
