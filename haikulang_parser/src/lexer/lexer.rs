@@ -1,29 +1,29 @@
-use std::iter::{FusedIterator, Peekable};
+use std::iter::Peekable;
 use std::str::Chars;
-use crate::lexer::token::Token;
+use crate::lexer::token::{Token, TokenType};
 use super::location::Location;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
     input: Peekable<Chars<'a>>,
-    current_location: Location,
+    location: Location,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(input: Chars<'a>) -> Self {
         Self {
             input: input.peekable(),
-            current_location: Location::default(),
+            location: Location::default(),
         }
     }
     
-    fn next_token(&mut self) -> Option<Token> {
+    fn next_token(&mut self) -> Token {
         self.skip_whitespace();
         
         if let Some(c) = self.peek_char() {
             todo!();
         } else {
-            None
+            Token { token_type: TokenType::Eof, data: "".to_string(), location: self.location.clone() }
         }
     }        
     
@@ -41,12 +41,12 @@ impl<'a> Lexer<'a> {
         if let Some(c) = self.input.next() {
             match c {
                 '\n' => {
-                    self.current_location.column = 1;
-                    self.current_location.line += 1;
+                    self.location.column = 1;
+                    self.location.line += 1;
                 }
-                _ => self.current_location.column += 1,
+                _ => self.location.column += 1,
             };
-            self.current_location.offset += 1;
+            self.location.offset += 1;
             
             Some(c)
         } else {
@@ -54,14 +54,3 @@ impl<'a> Lexer<'a> {
         }
     }
 }
-
-impl<'a> Iterator for Lexer<'a> {
-    type Item = Token;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        self.next_token()   
-    }
-}
-
-impl<'a> FusedIterator for Lexer<'a> {}
