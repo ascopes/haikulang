@@ -4,10 +4,15 @@ use crate::location::Location;
 pub enum TokenType {
     Eof,
 
+    // Error types
+    Unknown,
+    MalformedLiteral(String, Location),
+
     // Literals
     Ident,
-    String,
-    Number,
+    Str(String),
+    Int(u64),
+    Float(f64),
 
     // Operators
     Add,
@@ -27,6 +32,6 @@ pub enum TokenType {
 #[derive(Debug, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
-    pub data: String,
+    pub raw: String,
     pub location: Location,
 }
