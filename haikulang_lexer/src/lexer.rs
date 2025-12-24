@@ -1,18 +1,17 @@
 use crate::location::Location;
 use crate::token::{Token, TokenType};
-use std::iter::Peekable;
-use std::str::{Chars, FromStr};
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
-    input: Peekable<Chars<'a>>,
+    input: &'a str,
     location: Location,
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(input: Chars<'a>) -> Self {
+    pub fn new(input: &'a str) -> Self {
         Self {
-            input: input.peekable(),
+            input,
             location: Location::default(),
         }
     }
@@ -20,179 +19,359 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
-        let next_char = if let Some(c) = self.peek_char() {
-            c
-        } else {
-            return self.eof();
-        };
-
-        match next_char {
-            '0'..='9' => self.number(),
-            'a'..='z' | 'A'..='Z' | '_' => self.ident(),
-            '"' => self.str(),
-            _ => self.unknown(),
+        match self.peek(0) {
+            Some('0'..='9') => self.num_lit(),
+            Some('a'..='z' | 'A'..='Z' | '_') => self.ident(),
+            Some('"') => self.str_lit(),
+            Some('+') => self.simple(TokenType::Add, 1),
+            Some('-') => self.simple(TokenType::Sub, 1),
+            Some('*') => match self.peek(1) {
+                Some('*') => self.simple(TokenType::Pow, 2),
+                _ => self.simple(TokenType::Mul, 1),
+            },
+            Some('/') => match self.peek(1) {
+                Some('/') => self.simple(TokenType::IntDiv, 2),
+                _ => self.simple(TokenType::Div, 1),
+            },
+            Some('%') => self.simple(TokenType::Mod, 1),
+            Some(';') => self.simple(TokenType::Semi, 1),
+            Some('(') => self.simple(TokenType::LeftParen, 1),
+            Some(')') => self.simple(TokenType::RightParen, 1),
+            Some(_) => self.simple(TokenType::Unknown, 1),
+            None => Token {
+                token_type: TokenType::Eof,
+                raw: "".to_string(),
+                location: self.location,
+            },
         }
     }
 
-    /// WHITESPACE ::= ( ' ' | '\n' | '\r' | '\t' )+ ;
     fn skip_whitespace(&mut self) {
-        while let Some(c) = self.peek_char()
-            && matches!(c, ' ' | '\n' | '\r' | '\t')
-        {
-            self.next_char().unwrap();
+        while matches!(self.peek(0), Some(' ' | '\n' | '\r' | '\t')) {
+            self.advance(1);
         }
     }
 
-    /// EOF ::= ;
-    fn eof(&self) -> Token {
-        Token {
-            token_type: TokenType::Eof,
-            raw: "".to_string(),
-            location: self.location.clone(),
-        }
-    }
+    // NUMBER_LIT ::= FLOAT_LIT | INT_LIT ;
+    //  FLOAT_LIT ::= [0-9]+ , '.' , [0-9]+ , ( [eE] , [+-]? , [0-9]+ ) ?
+    //              | [0-9]+ , [eE] , [+-]? , [0-9]+
+    //              ;
+    //    INT_LIT ::= [0-9]+ ;
+    fn num_lit(&mut self) -> Token {
+        let start_location = self.location;
+        self.advance_while(|_, c| matches!(c, '0'..='9'));
 
-    /// FLOAT           ::= FLOAT_MANTISSA , FLOAT_EXPONENT? ;
-    /// _FLOAT_MANTISSA ::= [0-9]+ , ( '.' , [0-9]* )? ;
-    /// _FLOAT_EXPONENT ::= ( [eE] , [+-]? , [0-9]+ )
-    /// INT    ::= [0-9]+ ;
-    ///
-    /// Note that a FLOAT without a decimal part and without an exponent is treated as an INT
-    /// literal.
-    fn number(&mut self) -> Token {
-        let location = self.location.clone();
-        // We "promote" to a float later if we find floaty characters!
-        let mut float = false;
-        // First char is guaranteed to be a digit.
-        let mut raw = self.next_char().unwrap().to_string();
-
-        // Parse the integer bit.
-        while matches!(self.peek_char(), Some('0'..='9')) {
-            raw.push(self.next_char().unwrap());
-        }
-
-        if let Some('.') = self.peek_char() {
-            float = true;
-
-            raw.push('.');
-
-            while matches!(self.peek_char(), Some('0'..='9')) {
-                raw.push(self.next_char().unwrap());
-            }
+        // If we end with a period, 'e', or 'E', then we're parsing a float literal. Otherwise,
+        // we're just parsing an int and can stop now.
+        if !matches!(self.peek(0), Some('.' | 'e' | 'E')) {
+            let raw = &self.input[start_location.offset..self.location.offset];
+            return match u64::from_str(raw) {
+                Ok(value) => Token {
+                    token_type: TokenType::IntLit(value),
+                    raw: raw.to_string(),
+                    location: start_location,
+                },
+                Err(_) => Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "Invalid value for int literal",
+                        self.location,
+                    ),
+                    raw: raw.to_string(),
+                    location: start_location,
+                },
+            };
         }
 
-        if let Some('e') | Some('E') = self.peek_char() {
-            float = true;
+        // Parse the decimal part.
+        if matches!(self.peek(0), Some('.')) {
+            self.advance(1);
 
-            raw.push(self.next_char().unwrap());
-
-            if let Some('+') | Some('-') = self.peek_char() {
-                raw.push(self.next_char().unwrap());
-            }
-
-            let mut at_least_one_char = false;
-            while matches!(self.peek_char(), Some('0'..='9')) {
-                at_least_one_char = true;
-                raw.push(self.next_char().unwrap());
-            }
-
-            // If we do not have at least one digit in the exponent, choke.
-            if !at_least_one_char {
+            // If we have zero decimal digits, we're malformed, so fail out.
+            if self.advance_while(|_, c| matches!(c, '0'..='9')) == 0 {
                 return Token {
                     token_type: TokenType::MalformedLiteral(
-                        "Failed to parse float literal: missing exponent".to_string(),
-                        self.location.clone(),
+                        "Missing decimal for float literal",
+                        self.location,
                     ),
-                    raw,
-                    location,
+                    raw: self.input[start_location.offset..self.location.offset].to_string(),
+                    location: start_location,
                 };
             }
         }
 
-        let token_type = if float {
-            match f64::from_str(&raw) {
-                Ok(float_value) => TokenType::Float(float_value),
-                Err(error) => TokenType::MalformedLiteral(
-                    format!("Failed to parse float literal: {}", error),
-                    self.location.clone(),
-                ),
-            }
-        } else {
-            match u64::from_str(&raw) {
-                Ok(int_value) => TokenType::Int(int_value),
-                Err(error) => TokenType::MalformedLiteral(
-                    format!("Failed to parse int literal: {}", error),
-                    self.location.clone(),
-                ),
-            }
-        };
+        // Parse the exponent.
+        if matches!(self.peek(0), Some('e' | 'E')) {
+            self.advance(1);
 
-        Token {
-            token_type,
-            raw,
-            location,
+            // Take a single optional + or - before the exponent value.
+            if matches!(self.peek(0), Some('+' | '-')) {
+                self.advance(1);
+            }
+
+            // If we have zero exponent digits, we're malformed, so fail out.
+            if self.advance_while(|_, c| matches!(c, '0'..='9')) == 0 {
+                return Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "Missing exponent value for float literal",
+                        self.location,
+                    ),
+                    raw: self.input[start_location.offset..self.location.offset].to_string(),
+                    location: start_location,
+                };
+            }
+        }
+
+        let raw = &self.input[start_location.offset..self.location.offset];
+
+        match f64::from_str(raw) {
+            Ok(value) => Token {
+                token_type: TokenType::FloatLit(value),
+                raw: raw.to_string(),
+                location: start_location,
+            },
+            Err(_) => Token {
+                token_type: TokenType::MalformedLiteral(
+                    "Invalid value for float literal",
+                    self.location,
+                ),
+                raw: raw.to_string(),
+                location: start_location,
+            },
         }
     }
 
-    /// IDENT        ::= _IDENT_START , _IDENT_REST*;
-    /// _IDENT_START ::= [_a-zA-Z] ;
-    /// _IDENT_REST  ::= [_a-zA-Z0-9] ;
-    fn ident(&mut self) -> Token {
-        let location = self.location.clone();
-        // First char is guaranteed to be an identifier start character.
-        let mut raw = self.next_char().unwrap().to_string();
+    //         STR_LIT ::= '"' , STR_LIT_CHAR | STR_LIT_ESCAPE *, '"' ;
+    //    STR_LIT_CHAR ::= /* any char, except '"', '\r', '\n', or '\\' */ ;
+    //  STR_LIT_ESCAPE ::= '\\' , [rnt\\] ;
+    fn str_lit(&mut self) -> Token {
+        let start_location = self.location;
+        let mut parsed_string = String::new();
 
-        while matches!(
-            self.peek_char(),
-            Some('a'..='z' | 'A'..='Z' | '0'..='9' | '_')
-        ) {
-            raw.push(self.next_char().unwrap());
+        // First character is always a double quote, enforced by the caller, but sanity check it
+        // during debug builds.
+        debug_assert!(matches!(self.peek(0), Some('"')));
+        self.advance(1);
+
+        loop {
+            match self.peek(0) {
+                Some('"') => break,
+                Some('\\') => {
+                    // Parse escape
+                    self.advance(1);
+                    match self.peek(0) {
+                        Some('r') => {
+                            self.advance(1);
+                            parsed_string.push('\r');
+                        }
+                        Some('n') => {
+                            self.advance(1);
+                            parsed_string.push('\n');
+                        }
+                        Some('t') => {
+                            self.advance(1);
+                            parsed_string.push('\t');
+                        }
+                        Some('\\') => {
+                            self.advance(1);
+                            parsed_string.push('\\');
+                        }
+                        Some(_) | None => {
+                            return Token {
+                                token_type: TokenType::MalformedLiteral(
+                                    "Malformed string escape sequence",
+                                    self.location,
+                                ),
+                                raw: self.substring(start_location).to_string(),
+                                location: start_location,
+                            };
+                        }
+                    }
+                }
+                Some('\r' | '\n') | None => {
+                    // Newlines are not allowed in strings.
+                    return Token {
+                        token_type: TokenType::MalformedLiteral(
+                            "Expected string close double quotes",
+                            self.location,
+                        ),
+                        raw: self.substring(start_location).to_string(),
+                        location: start_location,
+                    };
+                }
+                Some(c) => {
+                    parsed_string.push(c);
+                    self.advance(1);
+                }
+            };
         }
+
+        // Finally, we expect a close quote here. Again, just sanity check during debug
+        // builds. We shouldn't get here if we hit EOF or the end of a line.
+        debug_assert!(matches!(self.peek(0), Some('"')));
+        self.advance(1);
+
+        Token {
+            token_type: TokenType::StrLit(parsed_string),
+            raw: self.substring(start_location).to_string(),
+            location: start_location,
+        }
+    }
+
+    // IDENT ::= [A-Za-z_] , [A-Za-z0-9_]+ ;
+    fn ident(&mut self) -> Token {
+        let start_location = self.location;
+
+        // First character cannot contain digits, but we enforce that from the caller level.
+        // That aside, just sanity check this during debug builds to be safe.
+        debug_assert!(matches!(self.peek(0), Some('a'..='z' | 'A'..='Z' | '_')));
+        self.advance_while(|_, c| matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_'));
 
         Token {
             token_type: TokenType::Ident,
-            raw,
-            location,
+            raw: self.substring(start_location).to_string(),
+            location: start_location,
         }
     }
 
-    /// STR         ::= '"' , (_STR_ESCAPE | _STR_CHAR)* , '"' ;
-    /// _STR_ESCAPE ::= '\\' , ["nrt\\] ;
-    /// _STR_CHAR   ::= [^\r\n\\"] ;
-    fn str(&mut self) -> Token {
-        todo!();
+    fn simple(&mut self, token_type: TokenType, length: usize) -> Token {
+        let token = Token {
+            token_type,
+            raw: self.peek_range(0, length).to_string(),
+            location: self.location,
+        };
+        self.advance(length);
+
+        token
     }
 
-    /// UNKNOWN ::= /* any character not matching the rest of the grammar */ ;
-    fn unknown(&mut self) -> Token {
-        let location = self.location.clone();
-
-        Token {
-            token_type: TokenType::Unknown,
-            raw: self.next_char().unwrap().to_string(),
-            location,
+    fn peek(&self, offset: usize) -> Option<char> {
+        if self.location.offset + offset >= self.input.len() {
+            return None;
         }
+
+        self.input[self.location.offset + offset..self.location.offset + offset + 1]
+            .chars()
+            .next()
     }
 
-    #[must_use]
-    fn peek_char(&mut self) -> Option<&char> {
-        self.input.peek()
+    fn peek_range(&self, start: usize, end: usize) -> &str {
+        let absolute_start = self.location.offset + start;
+        let absolute_end = self.location.offset + end;
+
+        &self.input[absolute_start..absolute_end]
     }
 
-    fn next_char(&mut self) -> Option<char> {
-        if let Some(c) = self.input.next() {
-            match c {
-                '\n' => {
+    fn advance(&mut self, n: usize) {
+        debug_assert!(n > 0, "negative or zero offset {}", n);
+
+        for i in 0..n {
+            match &self.input[i..i + 1] {
+                "" => break,
+                "\n" => {
                     self.location.column = 1;
                     self.location.line += 1;
                 }
-                _ => self.location.column += 1,
-            };
-            self.location.offset += 1;
+                _ => {
+                    self.location.column += 1;
+                }
+            }
 
-            Some(c)
-        } else {
-            None
+            self.location.offset += 1;
         }
+    }
+
+    fn advance_while(&mut self, condition: impl Fn(usize, char) -> bool) -> usize {
+        let mut offset = 0;
+        while let Some(c) = self.peek(0)
+            && condition(offset, c)
+        {
+            self.advance(1);
+            offset += 1;
+        }
+
+        offset
+    }
+
+    fn substring(&self, start_location: Location) -> &str {
+        &self.input[start_location.offset..self.location.offset]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    #[test_case(                 "123",                  123 ; "regular int")]
+    #[test_case(              "012345",                12345 ; "int with a leading zero") ]
+    #[test_case("18446744073709551615", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
+    fn int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
+        // Given
+        let mut lexer = Lexer::new(input);
+
+        // When
+        let token = lexer.next_token();
+
+        // Then
+        assert_eq!(&token.raw, input);
+        assert_eq!(
+            token.location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(token.token_type, TokenType::IntLit(expected_output));
+        assert_eq!(
+            lexer.location,
+            Location {
+                offset: input.len(),
+                line: 1,
+                column: 1 + input.len()
+            }
+        );
+    }
+
+    #[test_case(              "1234.5",               1234.5 ; "float with no exponent")]
+    #[test_case(               "123e4",                123e4 ; "float with lowercase exponent but no decimal")]
+    #[test_case(               "123E4",                123e4 ; "float with uppercase exponent but no decimal")]
+    #[test_case(              "123e+4",                123e4 ; "float with lowercase exponent and plus but no decimal")]
+    #[test_case(              "123E+4",                123e4 ; "float with uppercase exponent and plus but no decimal")]
+    #[test_case(              "123e-4",               123e-4 ; "float with lowercase exponent and minus but no decimal")]
+    #[test_case(              "123E-4",               123e-4 ; "float with uppercase exponent and minus but no decimal")]
+    #[test_case(           "123.987e4",            123.987e4 ; "float with lowercase exponent and decimal")]
+    #[test_case(           "123.987E4",            123.987e4 ; "float with uppercase exponent and decimal")]
+    #[test_case(          "123.987e+4",            123.987e4 ; "float with lowercase exponent, plus and decimal")]
+    #[test_case(          "123.987E+4",            123.987e4 ; "float with uppercase exponent, plus and decimal")]
+    #[test_case(          "123.987e-4",           123.987e-4 ; "float with lowercase exponent, minus and decimal")]
+    #[test_case(          "123.987E-4",           123.987e-4 ; "float with uppercase exponent, minus and decimal")]
+    #[test_case("2.78281828459045e123", 2.78281828459045e123 ; "float with a big exponent")]
+    fn float_lit_is_tokenized_as_expected(input: &str, expected_output: f64) {
+        // Given
+        let mut lexer = Lexer::new(input);
+
+        // When
+        let token = lexer.next_token();
+
+        // Then
+        assert_eq!(&token.raw, input);
+        assert_eq!(
+            token.location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(token.token_type, TokenType::FloatLit(expected_output));
+        assert_eq!(
+            lexer.location,
+            Location {
+                offset: input.len(),
+                line: 1,
+                column: 1 + input.len()
+            }
+        );
     }
 }

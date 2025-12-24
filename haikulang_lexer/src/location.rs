@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-type Position = usize;
+pub type Position = usize;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Location {
@@ -46,8 +46,8 @@ mod tests {
         assert_eq!(expected_location, location);
     }
 
-    #[test_case(0, 1, 2, "1:2")]
-    #[test_case(67, 420, 69, "420:69")]
+    #[test_case( 0,   1,  2,    "1:2" ; "start of file")]
+    #[test_case(67, 420, 69, "420:69" ; "middle of file")]
     fn display_is_formatted_as_expected(
         input_offset: Position,
         input_line: Position,

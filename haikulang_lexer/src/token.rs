@@ -6,13 +6,13 @@ pub enum TokenType {
 
     // Error types
     Unknown,
-    MalformedLiteral(String, Location),
+    MalformedLiteral(&'static str, Location),
 
     // Literals
     Ident,
-    Str(String),
-    Int(u64),
-    Float(f64),
+    StrLit(String),
+    IntLit(u64),
+    FloatLit(f64),
 
     // Operators
     Add,
