@@ -20,24 +20,24 @@ impl<'a> Lexer<'a> {
         self.skip_whitespace();
 
         match self.peek(0) {
-            Some('0'..='9') => self.num_lit(),
-            Some('a'..='z' | 'A'..='Z' | '_') => self.ident(),
-            Some('"') => self.str_lit(),
-            Some('+') => self.simple(TokenType::Add, 1),
-            Some('-') => self.simple(TokenType::Sub, 1),
+            Some('0'..='9') => self.tokenize_num_lit(),
+            Some('a'..='z' | 'A'..='Z' | '_') => self.tokenize_ident(),
+            Some('"') => self.tokenize_str_lit(),
+            Some('+') => self.tokenize_simple(TokenType::Add, 1),
+            Some('-') => self.tokenize_simple(TokenType::Sub, 1),
             Some('*') => match self.peek(1) {
-                Some('*') => self.simple(TokenType::Pow, 2),
-                _ => self.simple(TokenType::Mul, 1),
+                Some('*') => self.tokenize_simple(TokenType::Pow, 2),
+                _ => self.tokenize_simple(TokenType::Mul, 1),
             },
             Some('/') => match self.peek(1) {
-                Some('/') => self.simple(TokenType::IntDiv, 2),
-                _ => self.simple(TokenType::Div, 1),
+                Some('/') => self.tokenize_simple(TokenType::IntDiv, 2),
+                _ => self.tokenize_simple(TokenType::Div, 1),
             },
-            Some('%') => self.simple(TokenType::Mod, 1),
-            Some(';') => self.simple(TokenType::Semi, 1),
-            Some('(') => self.simple(TokenType::LeftParen, 1),
-            Some(')') => self.simple(TokenType::RightParen, 1),
-            Some(_) => self.simple(TokenType::Unknown, 1),
+            Some('%') => self.tokenize_simple(TokenType::Mod, 1),
+            Some(';') => self.tokenize_simple(TokenType::Semi, 1),
+            Some('(') => self.tokenize_simple(TokenType::LeftParen, 1),
+            Some(')') => self.tokenize_simple(TokenType::RightParen, 1),
+            Some(_) => self.tokenize_simple(TokenType::Unknown, 1),
             None => Token {
                 token_type: TokenType::Eof,
                 raw: "".to_string(),
@@ -57,7 +57,7 @@ impl<'a> Lexer<'a> {
     //              | [0-9]+ , [eE] , [+-]? , [0-9]+
     //              ;
     //    INT_LIT ::= [0-9]+ ;
-    fn num_lit(&mut self) -> Token {
+    fn tokenize_num_lit(&mut self) -> Token {
         let start_location = self.location;
         self.advance_while(|_, c| matches!(c, '0'..='9'));
 
@@ -140,53 +140,28 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    //         STR_LIT ::= '"' , STR_LIT_CHAR | STR_LIT_ESCAPE *, '"' ;
-    //    STR_LIT_CHAR ::= /* any char, except '"', '\r', '\n', or '\\' */ ;
-    //  STR_LIT_ESCAPE ::= '\\' , [rnt\\] ;
-    fn str_lit(&mut self) -> Token {
+    //      STR_LIT ::= '"' , ( STR_LIT_CHAR | STR_LIT_ESCAPE * ) , '"' ;
+    // STR_LIT_CHAR ::= /* any char, except '"', '\r', '\n', or '\\' */ ;
+    fn tokenize_str_lit(&mut self) -> Token {
         let start_location = self.location;
         let mut parsed_string = String::new();
 
-        // First character is always a double quote, enforced by the caller, but sanity check it
-        // during debug builds.
         debug_assert!(matches!(self.peek(0), Some('"')));
         self.advance(1);
 
         loop {
             match self.peek(0) {
                 Some('"') => break,
-                Some('\\') => {
-                    // Parse escape
-                    self.advance(1);
-                    match self.peek(0) {
-                        Some('r') => {
-                            self.advance(1);
-                            parsed_string.push('\r');
-                        }
-                        Some('n') => {
-                            self.advance(1);
-                            parsed_string.push('\n');
-                        }
-                        Some('t') => {
-                            self.advance(1);
-                            parsed_string.push('\t');
-                        }
-                        Some('\\') => {
-                            self.advance(1);
-                            parsed_string.push('\\');
-                        }
-                        Some(_) | None => {
-                            return Token {
-                                token_type: TokenType::MalformedLiteral(
-                                    "Malformed string escape sequence",
-                                    self.location,
-                                ),
-                                raw: self.substring(start_location).to_string(),
-                                location: start_location,
-                            };
-                        }
+                Some('\\') => match self.tokenize_str_lit_escape() {
+                    Ok(c) => parsed_string.push(c),
+                    Err((err, location)) => {
+                        return Token {
+                            token_type: TokenType::MalformedLiteral(err, location),
+                            raw: self.substring(start_location).to_string(),
+                            location: start_location,
+                        };
                     }
-                }
+                },
                 Some('\r' | '\n') | None => {
                     // Newlines are not allowed in strings.
                     return Token {
@@ -205,8 +180,6 @@ impl<'a> Lexer<'a> {
             };
         }
 
-        // Finally, we expect a close quote here. Again, just sanity check during debug
-        // builds. We shouldn't get here if we hit EOF or the end of a line.
         debug_assert!(matches!(self.peek(0), Some('"')));
         self.advance(1);
 
@@ -217,12 +190,40 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // STR_LIT_ESCAPE ::= '\\' , [rnt\\] ;
+    fn tokenize_str_lit_escape(&mut self) -> Result<char, (&'static str, Location)> {
+        debug_assert!(matches!(self.peek(0), Some('\\')));
+
+        let location = self.location;
+        self.advance(1);
+        match self.peek(0) {
+            Some('n') => {
+                self.advance(1);
+                Ok('\n')
+            }
+            Some('r') => {
+                self.advance(1);
+                Ok('\r')
+            }
+            Some('t') => {
+                self.advance(1);
+                Ok('\t')
+            }
+            Some('\\') => {
+                self.advance(1);
+                Ok('\\')
+            }
+            Some(_) | None => {
+                self.advance(1);
+                Err(("Unrecognised escape sequence", location))
+            }
+        }
+    }
+
     // IDENT ::= [A-Za-z_] , [A-Za-z0-9_]+ ;
-    fn ident(&mut self) -> Token {
+    fn tokenize_ident(&mut self) -> Token {
         let start_location = self.location;
 
-        // First character cannot contain digits, but we enforce that from the caller level.
-        // That aside, just sanity check this during debug builds to be safe.
         debug_assert!(matches!(self.peek(0), Some('a'..='z' | 'A'..='Z' | '_')));
         self.advance_while(|_, c| matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_'));
 
@@ -233,7 +234,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn simple(&mut self, token_type: TokenType, length: usize) -> Token {
+    fn tokenize_simple(&mut self, token_type: TokenType, length: usize) -> Token {
         let token = Token {
             token_type,
             raw: self.peek_range(0, length).to_string(),
