@@ -1,6 +1,7 @@
 use crate::location::Location;
 use crate::token::{Token, TokenType};
 use std::str::FromStr;
+use hexf_parse::parse_hexf64;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -52,92 +53,296 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // NUMBER_LIT ::= FLOAT_LIT | INT_LIT ;
-    //  FLOAT_LIT ::= [0-9]+ , '.' , [0-9]+ , ( [eE] , [+-]? , [0-9]+ ) ?
-    //              | [0-9]+ , [eE] , [+-]? , [0-9]+
-    //              ;
-    //    INT_LIT ::= [0-9]+ ;
+    // NUM_LIT ::= BIN_INT_LIT
+    //           | OCT_INT_LIT
+    //           | DEC_NUM_LIT
+    //           | HEX_NUM_LIT
+    //           ;
     fn tokenize_num_lit(&mut self) -> Token {
-        let start_location = self.location;
-        self.advance_while(|_, c| matches!(c, '0'..='9'));
-
-        // If we end with a period, 'e', or 'E', then we're parsing a float literal. Otherwise,
-        // we're just parsing an int and can stop now.
-        if !matches!(self.peek(0), Some('.' | 'e' | 'E')) {
-            let raw = &self.input[start_location.offset..self.location.offset];
-            return match u64::from_str(raw) {
-                Ok(value) => Token {
-                    token_type: TokenType::IntLit(value),
-                    raw: raw.to_string(),
-                    location: start_location,
-                },
-                Err(_) => Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "Invalid value for int literal",
-                        self.location,
-                    ),
-                    raw: raw.to_string(),
-                    location: start_location,
-                },
+        if self.peek(0).unwrap() == '0' {
+            match self.peek(1) {
+                Some('b' | 'B') => return self.tokenize_bin_int_lit(),
+                Some('o' | 'O') => return self.tokenize_oct_int_lit(),
+                Some('x' | 'X') => return self.tokenize_hex_num_lit(),
+                _ => {}
             };
         }
 
-        // Parse the decimal part.
-        if matches!(self.peek(0), Some('.')) {
-            self.advance(1);
+        self.tokenize_dec_num_lit()
+    }
 
-            // If we have zero decimal digits, we're malformed, so fail out.
-            if self.advance_while(|_, c| matches!(c, '0'..='9')) == 0 {
-                return Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "Missing decimal for float literal",
-                        self.location,
-                    ),
-                    raw: self.input[start_location.offset..self.location.offset].to_string(),
-                    location: start_location,
-                };
-            }
+    // BIN_INT_LIT ::= ( '0b' | '0B' ) , [01] + ;
+    fn tokenize_bin_int_lit(&mut self) -> Token {
+        let location = self.location;
+        self.advance(2);
+        debug_assert!(matches!(self.substring(location), "0b" | "0B"));
+
+        let mut digits = String::new();
+
+        if self.take_digits_with_radix(&mut digits, 2) == 0 {
+            return Token {
+                token_type: TokenType::MalformedLiteral(
+                    "expected binary literal value",
+                    self.location,
+                ),
+                raw: self.substring(location).to_string(),
+                location,
+            };
         }
 
-        // Parse the exponent.
-        if matches!(self.peek(0), Some('e' | 'E')) {
-            self.advance(1);
-
-            // Take a single optional + or - before the exponent value.
-            if matches!(self.peek(0), Some('+' | '-')) {
-                self.advance(1);
-            }
-
-            // If we have zero exponent digits, we're malformed, so fail out.
-            if self.advance_while(|_, c| matches!(c, '0'..='9')) == 0 {
-                return Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "Missing exponent value for float literal",
-                        self.location,
-                    ),
-                    raw: self.input[start_location.offset..self.location.offset].to_string(),
-                    location: start_location,
-                };
-            }
-        }
-
-        let raw = &self.input[start_location.offset..self.location.offset];
-
-        match f64::from_str(raw) {
+        match u64::from_str_radix(&digits, 2) {
             Ok(value) => Token {
-                token_type: TokenType::FloatLit(value),
-                raw: raw.to_string(),
-                location: start_location,
+                token_type: TokenType::IntLit(value),
+                raw: self.substring(location).to_string(),
+                location,
             },
             Err(_) => Token {
                 token_type: TokenType::MalformedLiteral(
-                    "Invalid value for float literal",
+                    "binary literal is too large",
                     self.location,
                 ),
-                raw: raw.to_string(),
-                location: start_location,
+                raw: self.substring(location).to_string(),
+                location,
             },
         }
+    }
+
+    // OCT_INT_LIT ::= ( '0o' | '0O' ) , [0-7] + ;
+    fn tokenize_oct_int_lit(&mut self) -> Token {
+        let location = self.location;
+        self.advance(2);
+        debug_assert!(matches!(self.substring(location), "0o" | "0O"));
+
+        let mut digits = String::new();
+
+        if self.take_digits_with_radix(&mut digits, 8) == 0 {
+            return Token {
+                token_type: TokenType::MalformedLiteral(
+                    "expected octal literal value",
+                    self.location,
+                ),
+                raw: self.substring(location).to_string(),
+                location,
+            };
+        }
+
+        match u64::from_str_radix(&digits, 8) {
+            Ok(value) => Token {
+                token_type: TokenType::IntLit(value),
+                raw: self.substring(location).to_string(),
+                location,
+            },
+            Err(_) => Token {
+                token_type: TokenType::MalformedLiteral(
+                    "octal literal is too large",
+                    self.location,
+                ),
+                raw: self.substring(location).to_string(),
+                location,
+            },
+        }
+    }
+
+    // DEC_NUM_LIT   ::= DEC_FLOAT_LIT | DEC_INT_LIT ;
+    // DEC_FLOAT_LIT ::= [0-9] + , ( '.' , [0-9] + ) ? , ( [eE] , [+-] ? , [0-9] + )
+    //                 | [0-9] + , '.' , [0-9] +
+    //                 ;
+    // DEC_INT_LIT   ::= [0-9] + ;
+    fn tokenize_dec_num_lit(&mut self) -> Token {
+        let location = self.location;
+        let mut is_float = false;
+
+        let mut number = String::new();
+        let initial_digits = self.take_digits_with_radix(&mut number, 10);
+        debug_assert!(initial_digits > 0);
+
+        if matches!(self.peek(0), Some('.')) {
+            number.push('.');
+            is_float = true;
+            self.advance(1);
+
+            if self.take_digits_with_radix(&mut number, 10) == 0 {
+                return Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "missing decimal float literal fraction",
+                        self.location,
+                    ),
+                    raw: self.substring(location).to_string(),
+                    location,
+                };
+            }
+        }
+
+        if matches!(self.peek(0), Some('e' | 'E')) {
+            number.push('e');
+            is_float = true;
+            self.advance(1);
+
+            if let Some(c) = self.peek(0)
+                && matches!(c, '+' | '-')
+            {
+                number.push(c);
+                self.advance(1);
+            }
+
+            if self.take_digits_with_radix(&mut number, 10) == 0 {
+                return Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "missing decimal float literal exponent",
+                        self.location,
+                    ),
+                    raw: self.substring(location).to_string(),
+                    location,
+                };
+            }
+        }
+
+        if is_float {
+            match f64::from_str(&number) {
+                Ok(value) => Token {
+                    token_type: TokenType::FloatLit(value),
+                    raw: self.substring(location).to_string(),
+                    location,
+                },
+                Err(_) => Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "decimal float literal is too large",
+                        self.location,
+                    ),
+                    raw: self.substring(location).to_string(),
+                    location,
+                },
+            }
+        } else {
+            match u64::from_str_radix(&number, 10) {
+                Ok(value) => Token {
+                    token_type: TokenType::IntLit(value),
+                    raw: self.substring(location).to_string(),
+                    location,
+                },
+                Err(_) => Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "decimal integer literal is too large",
+                        self.location,
+                    ),
+                    raw: self.substring(location).to_string(),
+                    location,
+                },
+            }
+        }
+    }
+
+    // HEX_NUM_LIT   ::= ( '0x' | '0X' ) , ( HEX_FLOAT_LIT | HEX_INT_LIT ) ;
+    // HEX_FLOAT_LIT ::= [0-9A-Fa-f] + , ( '.' , [0-9A-Fa-f] + ) ? , ( [pP] , [+-] ? , [0-9A-Fa-f] + )
+    //                 | [0-9A-Fa-f] + , '.' , [0-9A-Fa-f] +
+    //                 ;
+    // HEX_INT_LIT   ::= [0-9A-Fa-f] + ;
+    fn tokenize_hex_num_lit(&mut self) -> Token {
+        let location = self.location;
+        let mut is_float = false;
+
+        self.advance(2);
+        debug_assert!(matches!(self.substring(location), "0x" | "0X"));
+
+        let mut number = String::new();
+        if self.take_digits_with_radix(&mut number, 16) == 0 {
+            return Token {
+                token_type: TokenType::MalformedLiteral(
+                    "missing hexadecimal float mantissa",
+                    self.location,
+                ),
+                raw: self.substring(location).to_string(),
+                location,
+            };
+        }
+
+        if matches!(self.peek(0), Some('.')) {
+            number.push('.');
+            is_float = true;
+            self.advance(1);
+
+            if self.take_digits_with_radix(&mut number, 16) == 0 {
+                return Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "missing hexadecimal float fraction",
+                        self.location,
+                    ),
+                    raw: self.substring(location).to_string(),
+                    location,
+                };
+            }
+        }
+
+        if matches!(self.peek(0), Some('p' | 'P')) {
+            number.push('p');
+            is_float = true;
+            self.advance(1);
+
+            if let Some(c) = self.peek(0)
+                && matches!(c, '+' | '-')
+            {
+                number.push(c);
+                self.advance(1);
+            }
+
+            if self.take_digits_with_radix(&mut number, 16) == 0 {
+                return Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "missing hexadecimal float exponent",
+                        self.location,
+                    ),
+                    raw: self.substring(location).to_string(),
+                    location,
+                };
+            }
+        }
+
+        if is_float {
+            match parse_hexf64(&number, false) {
+                Ok(value) => Token {
+                    token_type: TokenType::FloatLit(value),
+                    raw: self.substring(location).to_string(),
+                    location,
+                },
+                Err(_) => Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "hexadecimal float literal is too large",
+                        self.location,
+                    ),
+                    raw: self.substring(location).to_string(),
+                    location,
+                },
+            }
+        } else {
+            match u64::from_str_radix(&number, 16) {
+                Ok(value) => Token {
+                    token_type: TokenType::IntLit(value),
+                    raw: self.substring(location).to_string(),
+                    location,
+                },
+                Err(_) => Token {
+                    token_type: TokenType::MalformedLiteral(
+                        "hexadecimal integer literal is too large",
+                        self.location,
+                    ),
+                    raw: self.substring(location).to_string(),
+                    location,
+                },
+            }
+        }
+    }
+
+    fn take_digits_with_radix(&mut self, value: &mut String, radix: u32) -> usize {
+        let mut offset = 0usize;
+        while let Some(c) = self.peek(0)
+            && c.is_digit(radix)
+        {
+            value.push(c);
+            self.advance(1);
+            offset += 1;
+        }
+
+        offset
     }
 
     //      STR_LIT ::= '"' , ( STR_LIT_CHAR | STR_LIT_ESCAPE * ) , '"' ;
