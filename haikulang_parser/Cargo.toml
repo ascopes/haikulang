@@ -6,6 +6,9 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[dependencies]
+haikulang_lexer = { path = "../haikulang_lexer" }
+
 [dev-dependencies]
 test-case.workspace = true
 
