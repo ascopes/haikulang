@@ -7,7 +7,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-hexf-parse.workspace = true
 
 [dev-dependencies]
 test-case.workspace = true

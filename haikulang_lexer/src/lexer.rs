@@ -1,7 +1,6 @@
 use crate::location::Location;
 use crate::token::{Token, TokenType};
 use std::str::FromStr;
-use hexf_parse::parse_hexf64;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -55,15 +54,15 @@ impl<'a> Lexer<'a> {
 
     // NUM_LIT ::= BIN_INT_LIT
     //           | OCT_INT_LIT
+    //           | HEX_INT_LIT
     //           | DEC_NUM_LIT
-    //           | HEX_NUM_LIT
     //           ;
     fn tokenize_num_lit(&mut self) -> Token {
         if self.peek(0).unwrap() == '0' {
             match self.peek(1) {
                 Some('b' | 'B') => return self.tokenize_bin_int_lit(),
                 Some('o' | 'O') => return self.tokenize_oct_int_lit(),
-                Some('x' | 'X') => return self.tokenize_hex_num_lit(),
+                Some('x' | 'X') => return self.tokenize_hex_int_lit(),
                 _ => {}
             };
         }
@@ -135,6 +134,42 @@ impl<'a> Lexer<'a> {
             Err(_) => Token {
                 token_type: TokenType::MalformedLiteral(
                     "octal literal is too large",
+                    self.location,
+                ),
+                raw: self.substring(location).to_string(),
+                location,
+            },
+        }
+    }
+
+    // HEX_INT_LIT ::= ( '0x' | '0X' ) , [0-9a-fA-F] + ;
+    fn tokenize_hex_int_lit(&mut self) -> Token {
+        let location = self.location;
+        self.advance(2);
+        debug_assert!(matches!(self.substring(location), "0x" | "0X"));
+
+        let mut digits = String::new();
+
+        if self.take_digits_with_radix(&mut digits, 16) == 0 {
+            return Token {
+                token_type: TokenType::MalformedLiteral(
+                    "expected hexadecimal literal value",
+                    self.location,
+                ),
+                raw: self.substring(location).to_string(),
+                location,
+            };
+        }
+
+        match u64::from_str_radix(&digits, 16) {
+            Ok(value) => Token {
+                token_type: TokenType::IntLit(value),
+                raw: self.substring(location).to_string(),
+                location,
+            },
+            Err(_) => Token {
+                token_type: TokenType::MalformedLiteral(
+                    "hexadecimal literal is too large",
                     self.location,
                 ),
                 raw: self.substring(location).to_string(),
@@ -223,106 +258,6 @@ impl<'a> Lexer<'a> {
                 Err(_) => Token {
                     token_type: TokenType::MalformedLiteral(
                         "decimal integer literal is too large",
-                        self.location,
-                    ),
-                    raw: self.substring(location).to_string(),
-                    location,
-                },
-            }
-        }
-    }
-
-    // HEX_NUM_LIT   ::= ( '0x' | '0X' ) , ( HEX_FLOAT_LIT | HEX_INT_LIT ) ;
-    // HEX_FLOAT_LIT ::= [0-9A-Fa-f] + , ( '.' , [0-9A-Fa-f] + ) ? , ( [pP] , [+-] ? , [0-9A-Fa-f] + )
-    //                 | [0-9A-Fa-f] + , '.' , [0-9A-Fa-f] +
-    //                 ;
-    // HEX_INT_LIT   ::= [0-9A-Fa-f] + ;
-    fn tokenize_hex_num_lit(&mut self) -> Token {
-        let location = self.location;
-        let mut is_float = false;
-
-        self.advance(2);
-        debug_assert!(matches!(self.substring(location), "0x" | "0X"));
-
-        let mut number = String::new();
-        if self.take_digits_with_radix(&mut number, 16) == 0 {
-            return Token {
-                token_type: TokenType::MalformedLiteral(
-                    "missing hexadecimal float mantissa",
-                    self.location,
-                ),
-                raw: self.substring(location).to_string(),
-                location,
-            };
-        }
-
-        if matches!(self.peek(0), Some('.')) {
-            number.push('.');
-            is_float = true;
-            self.advance(1);
-
-            if self.take_digits_with_radix(&mut number, 16) == 0 {
-                return Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "missing hexadecimal float fraction",
-                        self.location,
-                    ),
-                    raw: self.substring(location).to_string(),
-                    location,
-                };
-            }
-        }
-
-        if matches!(self.peek(0), Some('p' | 'P')) {
-            number.push('p');
-            is_float = true;
-            self.advance(1);
-
-            if let Some(c) = self.peek(0)
-                && matches!(c, '+' | '-')
-            {
-                number.push(c);
-                self.advance(1);
-            }
-
-            if self.take_digits_with_radix(&mut number, 16) == 0 {
-                return Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "missing hexadecimal float exponent",
-                        self.location,
-                    ),
-                    raw: self.substring(location).to_string(),
-                    location,
-                };
-            }
-        }
-
-        if is_float {
-            match parse_hexf64(&number, false) {
-                Ok(value) => Token {
-                    token_type: TokenType::FloatLit(value),
-                    raw: self.substring(location).to_string(),
-                    location,
-                },
-                Err(_) => Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "hexadecimal float literal is too large",
-                        self.location,
-                    ),
-                    raw: self.substring(location).to_string(),
-                    location,
-                },
-            }
-        } else {
-            match u64::from_str_radix(&number, 16) {
-                Ok(value) => Token {
-                    token_type: TokenType::IntLit(value),
-                    raw: self.substring(location).to_string(),
-                    location,
-                },
-                Err(_) => Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "hexadecimal integer literal is too large",
                         self.location,
                     ),
                     raw: self.substring(location).to_string(),
@@ -508,10 +443,106 @@ mod tests {
     use super::*;
     use test_case::test_case;
 
+    #[test_case(                                                         "0b1111011",                  123 ; "regular int with lowercase prefix")]
+    #[test_case(                                                         "0B1111010",                  122 ; "regular int with uppercase prefix")]
+    #[test_case(                                                       "0b001111010",                  122 ; "int with leading zero")]
+    #[test_case("0b1111111111111111111111111111111111111111111111111111111111111111", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
+    fn bin_int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
+        // Given
+        let mut lexer = Lexer::new(input);
+
+        // When
+        let token = lexer.next_token();
+
+        // Then
+        assert_eq!(&token.raw, input);
+        assert_eq!(
+            token.location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(token.token_type, TokenType::IntLit(expected_output));
+        assert_eq!(
+            lexer.location,
+            Location {
+                offset: input.len(),
+                line: 1,
+                column: 1 + input.len()
+            }
+        );
+    }
+
+    #[test_case(                   "0o123",                   83 ; "regular lowercase int")]
+    #[test_case(                   "0O125",                   85 ; "regular uppercase int")]
+    #[test_case(                "0o012345",                 5349 ; "int with a leading zero")]
+    #[test_case("0o1777777777777777777777", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
+    fn oct_int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
+        // Given
+        let mut lexer = Lexer::new(input);
+
+        // When
+        let token = lexer.next_token();
+
+        // Then
+        assert_eq!(&token.raw, input);
+        assert_eq!(
+            token.location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(token.token_type, TokenType::IntLit(expected_output));
+        assert_eq!(
+            lexer.location,
+            Location {
+                offset: input.len(),
+                line: 1,
+                column: 1 + input.len()
+            }
+        );
+    }
+
+    #[test_case(          "0x1a2b3c",              1715004 ; "regular lowercase int")]
+    #[test_case(          "0X1A2B3F",              1715007 ; "regular uppercase int")]
+    #[test_case(         "0x01a2b3F",              1715007 ; "int with a leading zero")]
+    #[test_case("0xFFFFFFFFFFFFFFFF", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
+    fn hex_int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
+        // Given
+        let mut lexer = Lexer::new(input);
+
+        // When
+        let token = lexer.next_token();
+
+        // Then
+        assert_eq!(&token.raw, input);
+        assert_eq!(
+            token.location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(token.token_type, TokenType::IntLit(expected_output));
+        assert_eq!(
+            lexer.location,
+            Location {
+                offset: input.len(),
+                line: 1,
+                column: 1 + input.len()
+            }
+        );
+    }
+
     #[test_case(                 "123",                  123 ; "regular int")]
-    #[test_case(              "012345",                12345 ; "int with a leading zero") ]
+    #[test_case(              "012345",                12345 ; "int with a leading zero")]
     #[test_case("18446744073709551615", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
-    fn int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
+    fn dec_int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
         // Given
         let mut lexer = Lexer::new(input);
 

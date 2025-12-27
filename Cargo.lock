@@ -12,7 +12,6 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 name = "haikulang_lexer"
 version = "0.0.0"
 dependencies = [
- "hexf-parse",
  "test-case",
 ]
 
@@ -22,12 +21,6 @@ version = "0.0.0"
 dependencies = [
  "test-case",
 ]
-
-[[package]]
-name = "hexf-parse"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 
 [[package]]
 name = "proc-macro2"
