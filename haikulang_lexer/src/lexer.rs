@@ -1,5 +1,5 @@
 use crate::location::Location;
-use crate::token::{Token, TokenType};
+use crate::token::{FloatValue, IntValue, Token, TokenType};
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -89,7 +89,7 @@ impl<'a> Lexer<'a> {
             };
         }
 
-        match u64::from_str_radix(&digits, 2) {
+        match IntValue::from_str_radix(&digits, 2) {
             Ok(value) => Token {
                 token_type: TokenType::IntLit(value),
                 raw: self.substring(location).to_string(),
@@ -125,7 +125,7 @@ impl<'a> Lexer<'a> {
             };
         }
 
-        match u64::from_str_radix(&digits, 8) {
+        match IntValue::from_str_radix(&digits, 8) {
             Ok(value) => Token {
                 token_type: TokenType::IntLit(value),
                 raw: self.substring(location).to_string(),
@@ -161,7 +161,7 @@ impl<'a> Lexer<'a> {
             };
         }
 
-        match u64::from_str_radix(&digits, 16) {
+        match IntValue::from_str_radix(&digits, 16) {
             Ok(value) => Token {
                 token_type: TokenType::IntLit(value),
                 raw: self.substring(location).to_string(),
@@ -233,7 +233,7 @@ impl<'a> Lexer<'a> {
         }
 
         if is_float {
-            match f64::from_str(&number) {
+            match FloatValue::from_str(&number) {
                 Ok(value) => Token {
                     token_type: TokenType::FloatLit(value),
                     raw: self.substring(location).to_string(),
@@ -249,7 +249,7 @@ impl<'a> Lexer<'a> {
                 },
             }
         } else {
-            match u64::from_str_radix(&number, 10) {
+            match IntValue::from_str(&number) {
                 Ok(value) => Token {
                     token_type: TokenType::IntLit(value),
                     raw: self.substring(location).to_string(),

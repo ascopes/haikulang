@@ -1,5 +1,8 @@
 use crate::location::Location;
 
+pub type IntValue = u64;
+pub type FloatValue = f64;
+
 #[derive(Debug, PartialEq)]
 pub enum TokenType {
     Eof,
@@ -11,8 +14,8 @@ pub enum TokenType {
     // Literals
     Ident,
     StrLit(String),
-    IntLit(u64),
-    FloatLit(f64),
+    IntLit(IntValue),
+    FloatLit(FloatValue),
 
     // Operators
     Add,
