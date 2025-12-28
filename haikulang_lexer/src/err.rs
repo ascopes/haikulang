@@ -17,6 +17,8 @@ impl Display for LexerError {
 
         if self.start_location != self.end_location {
             write!(f, ", at {} -> {}", self.start_location, self.end_location)?;
+        } else {
+            write!(f, ", at {}", self.start_location)?;
         }
 
         write!(f, " ({:?})", self.raw)?;
