@@ -33,7 +33,7 @@ impl Display for LexerError {
 
 impl Error for LexerError {}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum LexerErrorKind {
     UnrecognisedCharacter,
     UnrecognisedStringEscape,
@@ -44,14 +44,16 @@ pub enum LexerErrorKind {
 }
 
 impl LexerErrorKind {
-    pub fn message(&self) -> &str {
-        match *self {
-            LexerErrorKind::UnrecognisedCharacter => "unexpected character in input",
-            LexerErrorKind::UnrecognisedStringEscape => "unrecognised escape sequence in string",
-            LexerErrorKind::IncompleteIntLiteral => "incomplete integer literal",
-            LexerErrorKind::IncompleteFloatLiteral => "incomplete float literal",
-            LexerErrorKind::UnexpectedEndOfLine => "unexpected line end",
-            LexerErrorKind::OtherInvalidNumericLiteral => "failed to parse numeric literal",
+    pub fn message(&self) -> String {
+        use LexerErrorKind::*;
+
+        match self {
+            UnrecognisedCharacter => "unexpected character in input".to_string(),
+            UnrecognisedStringEscape => "unrecognised escape sequence in string".to_string(),
+            IncompleteIntLiteral => "incomplete integer literal".to_string(),
+            IncompleteFloatLiteral => "incomplete float literal".to_string(),
+            UnexpectedEndOfLine => "unexpected line end".to_string(),
+            OtherInvalidNumericLiteral => "failed to parse numeric literal".to_string(),
         }
     }
 }
