@@ -7,10 +7,6 @@ pub type FloatValue = f64;
 pub enum TokenType {
     Eof,
 
-    // Error types
-    Unknown,
-    MalformedLiteral(&'static str, Location),
-
     // Literals
     Ident,
     StrLit(String),

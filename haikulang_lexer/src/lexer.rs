@@ -1,3 +1,4 @@
+use crate::err::{LexerError, LexerErrorKind};
 use crate::location::Location;
 use crate::token::{FloatValue, IntValue, Token, TokenType};
 use std::str::FromStr;
@@ -8,6 +9,8 @@ pub struct Lexer<'a> {
     location: Location,
 }
 
+pub type LexerResult = Result<Token, LexerError>;
+
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
@@ -16,7 +19,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next_token(&mut self) -> Token {
+    pub fn next_token(&mut self) -> LexerResult {
         self.skip_whitespace();
 
         match self.peek(0) {
@@ -37,12 +40,18 @@ impl<'a> Lexer<'a> {
             Some(';') => self.tokenize_simple(TokenType::Semi, 1),
             Some('(') => self.tokenize_simple(TokenType::LeftParen, 1),
             Some(')') => self.tokenize_simple(TokenType::RightParen, 1),
-            Some(_) => self.tokenize_simple(TokenType::Unknown, 1),
-            None => Token {
+            Some(c) => Err(LexerError {
+                kind: LexerErrorKind::UnrecognisedCharacter,
+                raw: c.to_string(),
+                start_location: self.location,
+                end_location: self.location,
+                cause: None,
+            }),
+            None => Ok(Token {
                 token_type: TokenType::Eof,
                 raw: "".to_string(),
                 location: self.location,
-            },
+            }),
         }
     }
 
@@ -57,7 +66,7 @@ impl<'a> Lexer<'a> {
     //           | HEX_INT_LIT
     //           | DEC_NUM_LIT
     //           ;
-    fn tokenize_num_lit(&mut self) -> Token {
+    fn tokenize_num_lit(&mut self) -> LexerResult {
         if self.peek(0).unwrap() == '0' {
             match self.peek(1) {
                 Some('b' | 'B') => return self.tokenize_bin_int_lit(),
@@ -71,7 +80,7 @@ impl<'a> Lexer<'a> {
     }
 
     // BIN_INT_LIT ::= ( '0b' | '0B' ) , [01] + ;
-    fn tokenize_bin_int_lit(&mut self) -> Token {
+    fn tokenize_bin_int_lit(&mut self) -> LexerResult {
         let location = self.location;
         self.advance(2);
         debug_assert!(matches!(self.substring(location), "0b" | "0B"));
@@ -79,35 +88,33 @@ impl<'a> Lexer<'a> {
         let mut digits = String::new();
 
         if self.take_digits_with_radix(&mut digits, 2) == 0 {
-            return Token {
-                token_type: TokenType::MalformedLiteral(
-                    "expected binary literal value",
-                    self.location,
-                ),
+            return Err(LexerError {
+                kind: LexerErrorKind::IncompleteIntLiteral,
                 raw: self.substring(location).to_string(),
-                location,
-            };
+                start_location: location,
+                end_location: self.location,
+                cause: None,
+            });
         }
 
         match IntValue::from_str_radix(&digits, 2) {
-            Ok(value) => Token {
+            Ok(value) => Ok(Token {
                 token_type: TokenType::IntLit(value),
                 raw: self.substring(location).to_string(),
                 location,
-            },
-            Err(_) => Token {
-                token_type: TokenType::MalformedLiteral(
-                    "binary literal is too large",
-                    self.location,
-                ),
+            }),
+            Err(cause) => Err(LexerError {
+                kind: LexerErrorKind::OtherInvalidNumericLiteral,
                 raw: self.substring(location).to_string(),
-                location,
-            },
+                start_location: location,
+                end_location: self.location,
+                cause: Some(Box::new(cause)),
+            }),
         }
     }
 
     // OCT_INT_LIT ::= ( '0o' | '0O' ) , [0-7] + ;
-    fn tokenize_oct_int_lit(&mut self) -> Token {
+    fn tokenize_oct_int_lit(&mut self) -> LexerResult {
         let location = self.location;
         self.advance(2);
         debug_assert!(matches!(self.substring(location), "0o" | "0O"));
@@ -115,35 +122,33 @@ impl<'a> Lexer<'a> {
         let mut digits = String::new();
 
         if self.take_digits_with_radix(&mut digits, 8) == 0 {
-            return Token {
-                token_type: TokenType::MalformedLiteral(
-                    "expected octal literal value",
-                    self.location,
-                ),
+            return Err(LexerError {
+                kind: LexerErrorKind::IncompleteIntLiteral,
                 raw: self.substring(location).to_string(),
-                location,
-            };
+                start_location: location,
+                end_location: self.location,
+                cause: None,
+            });
         }
 
         match IntValue::from_str_radix(&digits, 8) {
-            Ok(value) => Token {
+            Ok(value) => Ok(Token {
                 token_type: TokenType::IntLit(value),
                 raw: self.substring(location).to_string(),
                 location,
-            },
-            Err(_) => Token {
-                token_type: TokenType::MalformedLiteral(
-                    "octal literal is too large",
-                    self.location,
-                ),
+            }),
+            Err(cause) => Err(LexerError {
+                kind: LexerErrorKind::OtherInvalidNumericLiteral,
                 raw: self.substring(location).to_string(),
-                location,
-            },
+                start_location: location,
+                end_location: self.location,
+                cause: Some(Box::new(cause)),
+            }),
         }
     }
 
     // HEX_INT_LIT ::= ( '0x' | '0X' ) , [0-9a-fA-F] + ;
-    fn tokenize_hex_int_lit(&mut self) -> Token {
+    fn tokenize_hex_int_lit(&mut self) -> LexerResult {
         let location = self.location;
         self.advance(2);
         debug_assert!(matches!(self.substring(location), "0x" | "0X"));
@@ -151,39 +156,37 @@ impl<'a> Lexer<'a> {
         let mut digits = String::new();
 
         if self.take_digits_with_radix(&mut digits, 16) == 0 {
-            return Token {
-                token_type: TokenType::MalformedLiteral(
-                    "expected hexadecimal literal value",
-                    self.location,
-                ),
+            return Err(LexerError {
+                kind: LexerErrorKind::IncompleteIntLiteral,
                 raw: self.substring(location).to_string(),
-                location,
-            };
+                start_location: location,
+                end_location: self.location,
+                cause: None,
+            });
         }
 
         match IntValue::from_str_radix(&digits, 16) {
-            Ok(value) => Token {
+            Ok(value) => Ok(Token {
                 token_type: TokenType::IntLit(value),
                 raw: self.substring(location).to_string(),
                 location,
-            },
-            Err(_) => Token {
-                token_type: TokenType::MalformedLiteral(
-                    "hexadecimal literal is too large",
-                    self.location,
-                ),
+            }),
+            Err(cause) => Err(LexerError {
+                kind: LexerErrorKind::OtherInvalidNumericLiteral,
                 raw: self.substring(location).to_string(),
-                location,
-            },
+                start_location: location,
+                end_location: self.location,
+                cause: Some(Box::new(cause)),
+            }),
         }
     }
 
     // DEC_NUM_LIT   ::= DEC_FLOAT_LIT | DEC_INT_LIT ;
-    // DEC_FLOAT_LIT ::= [0-9] + , ( '.' , [0-9] + ) ? , ( [eE] , [+-] ? , [0-9] + )
+    // DEC_FLOAT_LIT ::= [0-9] + , ( '.' , [0-9] * ) ? , ( [eE] , [+-] ? , [0-9] + )
     //                 | [0-9] + , '.' , [0-9] +
     //                 ;
     // DEC_INT_LIT   ::= [0-9] + ;
-    fn tokenize_dec_num_lit(&mut self) -> Token {
+    fn tokenize_dec_num_lit(&mut self) -> LexerResult {
         let location = self.location;
         let mut is_float = false;
 
@@ -196,15 +199,17 @@ impl<'a> Lexer<'a> {
             is_float = true;
             self.advance(1);
 
-            if self.take_digits_with_radix(&mut number, 10) == 0 {
-                return Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "missing decimal float literal fraction",
-                        self.location,
-                    ),
+            // We allow a dangling period if an exponent follows the fraction part.
+            if self.take_digits_with_radix(&mut number, 10) == 0
+                && !matches!(self.peek(0), Some('e' | 'E'))
+            {
+                return Err(LexerError {
+                    kind: LexerErrorKind::IncompleteFloatLiteral,
                     raw: self.substring(location).to_string(),
-                    location,
-                };
+                    start_location: location,
+                    end_location: self.location,
+                    cause: None,
+                });
             }
         }
 
@@ -221,48 +226,45 @@ impl<'a> Lexer<'a> {
             }
 
             if self.take_digits_with_radix(&mut number, 10) == 0 {
-                return Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "missing decimal float literal exponent",
-                        self.location,
-                    ),
+                return Err(LexerError {
+                    kind: LexerErrorKind::IncompleteFloatLiteral,
                     raw: self.substring(location).to_string(),
-                    location,
-                };
+                    start_location: location,
+                    end_location: self.location,
+                    cause: None,
+                });
             }
         }
 
         if is_float {
             match FloatValue::from_str(&number) {
-                Ok(value) => Token {
+                Ok(value) => Ok(Token {
                     token_type: TokenType::FloatLit(value),
                     raw: self.substring(location).to_string(),
                     location,
-                },
-                Err(_) => Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "decimal float literal is too large",
-                        self.location,
-                    ),
+                }),
+                Err(cause) => Err(LexerError {
+                    kind: LexerErrorKind::OtherInvalidNumericLiteral,
                     raw: self.substring(location).to_string(),
-                    location,
-                },
+                    start_location: location,
+                    end_location: self.location,
+                    cause: Some(Box::new(cause)),
+                }),
             }
         } else {
             match IntValue::from_str(&number) {
-                Ok(value) => Token {
+                Ok(value) => Ok(Token {
                     token_type: TokenType::IntLit(value),
                     raw: self.substring(location).to_string(),
                     location,
-                },
-                Err(_) => Token {
-                    token_type: TokenType::MalformedLiteral(
-                        "decimal integer literal is too large",
-                        self.location,
-                    ),
+                }),
+                Err(cause) => Err(LexerError {
+                    kind: LexerErrorKind::OtherInvalidNumericLiteral,
                     raw: self.substring(location).to_string(),
-                    location,
-                },
+                    start_location: location,
+                    end_location: self.location,
+                    cause: Some(Box::new(cause)),
+                }),
             }
         }
     }
@@ -282,7 +284,7 @@ impl<'a> Lexer<'a> {
 
     //      STR_LIT ::= '"' , ( STR_LIT_CHAR | STR_LIT_ESCAPE * ) , '"' ;
     // STR_LIT_CHAR ::= /* any char, except '"', '\r', '\n', or '\\' */ ;
-    fn tokenize_str_lit(&mut self) -> Token {
+    fn tokenize_str_lit(&mut self) -> LexerResult {
         let start_location = self.location;
         let mut parsed_string = String::new();
 
@@ -294,24 +296,17 @@ impl<'a> Lexer<'a> {
                 Some('"') => break,
                 Some('\\') => match self.tokenize_str_lit_escape() {
                     Ok(c) => parsed_string.push(c),
-                    Err((err, location)) => {
-                        return Token {
-                            token_type: TokenType::MalformedLiteral(err, location),
-                            raw: self.substring(start_location).to_string(),
-                            location: start_location,
-                        };
-                    }
+                    Err(err) => return Err(err),
                 },
                 Some('\r' | '\n') | None => {
                     // Newlines are not allowed in strings.
-                    return Token {
-                        token_type: TokenType::MalformedLiteral(
-                            "Expected string close double quotes",
-                            self.location,
-                        ),
+                    return Err(LexerError {
+                        kind: LexerErrorKind::UnexpectedEndOfLine,
                         raw: self.substring(start_location).to_string(),
-                        location: start_location,
-                    };
+                        start_location,
+                        end_location: self.location,
+                        cause: None,
+                    });
                 }
                 Some(c) => {
                     parsed_string.push(c);
@@ -323,18 +318,18 @@ impl<'a> Lexer<'a> {
         debug_assert!(matches!(self.peek(0), Some('"')));
         self.advance(1);
 
-        Token {
+        Ok(Token {
             token_type: TokenType::StrLit(parsed_string),
             raw: self.substring(start_location).to_string(),
             location: start_location,
-        }
+        })
     }
 
     // STR_LIT_ESCAPE ::= '\\' , [rnt\\] ;
-    fn tokenize_str_lit_escape(&mut self) -> Result<char, (&'static str, Location)> {
-        debug_assert!(matches!(self.peek(0), Some('\\')));
-
+    fn tokenize_str_lit_escape(&mut self) -> Result<char, LexerError> {
         let location = self.location;
+
+        debug_assert!(matches!(self.peek(0), Some('\\')));
         self.advance(1);
         match self.peek(0) {
             Some('n') => {
@@ -355,26 +350,32 @@ impl<'a> Lexer<'a> {
             }
             Some(_) | None => {
                 self.advance(1);
-                Err(("Unrecognised escape sequence", location))
+                Err(LexerError {
+                    kind: LexerErrorKind::UnrecognisedStringEscape,
+                    raw: self.substring(location).to_string(),
+                    start_location: location,
+                    end_location: self.location,
+                    cause: None,
+                })
             }
         }
     }
 
     // IDENT ::= [A-Za-z_] , [A-Za-z0-9_]+ ;
-    fn tokenize_ident(&mut self) -> Token {
+    fn tokenize_ident(&mut self) -> LexerResult {
         let start_location = self.location;
 
         debug_assert!(matches!(self.peek(0), Some('a'..='z' | 'A'..='Z' | '_')));
         self.advance_while(|_, c| matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_'));
 
-        Token {
+        Ok(Token {
             token_type: TokenType::Ident,
             raw: self.substring(start_location).to_string(),
             location: start_location,
-        }
+        })
     }
 
-    fn tokenize_simple(&mut self, token_type: TokenType, length: usize) -> Token {
+    fn tokenize_simple(&mut self, token_type: TokenType, length: usize) -> LexerResult {
         let token = Token {
             token_type,
             raw: self.peek_range(0, length).to_string(),
@@ -382,7 +383,7 @@ impl<'a> Lexer<'a> {
         };
         self.advance(length);
 
-        token
+        Ok(token)
     }
 
     fn peek(&self, offset: usize) -> Option<char> {
@@ -452,7 +453,7 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         // When
-        let token = lexer.next_token();
+        let token = lexer.next_token().expect("tokenization failed");
 
         // Then
         assert_eq!(&token.raw, input);
@@ -484,7 +485,7 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         // When
-        let token = lexer.next_token();
+        let token = lexer.next_token().expect("tokenization failed");
 
         // Then
         assert_eq!(&token.raw, input);
@@ -516,7 +517,7 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         // When
-        let token = lexer.next_token();
+        let token = lexer.next_token().expect("tokenization failed");
 
         // Then
         assert_eq!(&token.raw, input);
@@ -547,7 +548,7 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         // When
-        let token = lexer.next_token();
+        let token = lexer.next_token().expect("tokenization failed");
 
         // Then
         assert_eq!(&token.raw, input);
@@ -577,6 +578,7 @@ mod tests {
     #[test_case(              "123E+4",                123e4 ; "float with uppercase exponent and plus but no decimal")]
     #[test_case(              "123e-4",               123e-4 ; "float with lowercase exponent and minus but no decimal")]
     #[test_case(              "123E-4",               123e-4 ; "float with uppercase exponent and minus but no decimal")]
+    #[test_case(              "123.e4",              123.0e4 ; "float with lowercase exponent and missing decimal")]
     #[test_case(           "123.987e4",            123.987e4 ; "float with lowercase exponent and decimal")]
     #[test_case(           "123.987E4",            123.987e4 ; "float with uppercase exponent and decimal")]
     #[test_case(          "123.987e+4",            123.987e4 ; "float with lowercase exponent, plus and decimal")]
@@ -589,7 +591,7 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         // When
-        let token = lexer.next_token();
+        let token = lexer.next_token().expect("tokenization failed");
 
         // Then
         assert_eq!(&token.raw, input);
