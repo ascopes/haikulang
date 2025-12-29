@@ -2,6 +2,7 @@ use crate::location::Location;
 
 pub type IntValue = u64;
 pub type FloatValue = f64;
+pub type StrValue = String;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenType {
@@ -9,7 +10,7 @@ pub enum TokenType {
 
     // Literals
     Ident,
-    StrLit(String),
+    StrLit(StrValue),
     IntLit(IntValue),
     FloatLit(FloatValue),
 

@@ -1,23 +1,30 @@
-use crate::err::{LexerError, LexerErrorKind};
-use crate::lexer::{Lexer, LexerResult};
+use crate::lexer::err::{LexerError, LexerErrorKind};
+use crate::lexer::lexer::{Lexer, LexerResult};
+use crate::lexer::token::{FloatValue, IntValue, Token, TokenType};
 use crate::location::Location;
-use crate::token::{FloatValue, IntValue, Token, TokenType};
 use std::str::FromStr;
 
 #[derive(Debug)]
-pub struct StringLexer<'a> {
+pub(super) struct BasicLexer<'a> {
     input: &'a str,
     location: Location,
 }
 
-impl<'a> StringLexer<'a> {
-    pub fn new(input: &'a str) -> Self {
+impl<'a> Lexer for BasicLexer<'a> {
+    fn next_token(&mut self) -> LexerResult {
+        self.next()
+    }
+}
+
+impl<'a> BasicLexer<'a> {
+    pub(super) fn new(input: &'a str) -> Self {
         Self {
             input,
             location: Location::default(),
         }
     }
 
+    #[inline(always)]
     fn next(&mut self) -> LexerResult {
         self.skip_whitespace();
 
@@ -407,13 +414,6 @@ impl<'a> StringLexer<'a> {
     }
 }
 
-impl<'a> Lexer for StringLexer<'_> {
-    #[inline]
-    fn next_token(&mut self) -> LexerResult {
-        self.next()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -425,7 +425,7 @@ mod tests {
     #[test_case("0b1111111111111111111111111111111111111111111111111111111111111111", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
     fn bin_int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
         // Given
-        let mut lexer = StringLexer::new(input);
+        let mut lexer = BasicLexer::new(input);
 
         // When
         let token = lexer.next_token().expect("tokenization failed");
@@ -457,7 +457,7 @@ mod tests {
     #[test_case("0o1777777777777777777777", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
     fn oct_int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
         // Given
-        let mut lexer = StringLexer::new(input);
+        let mut lexer = BasicLexer::new(input);
 
         // When
         let token = lexer.next_token().expect("tokenization failed");
@@ -489,7 +489,7 @@ mod tests {
     #[test_case("0xFFFFFFFFFFFFFFFF", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
     fn hex_int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
         // Given
-        let mut lexer = StringLexer::new(input);
+        let mut lexer = BasicLexer::new(input);
 
         // When
         let token = lexer.next_token().expect("tokenization failed");
@@ -520,7 +520,7 @@ mod tests {
     #[test_case("18446744073709551615", 18446744073709551615 ; "max value for a 64 bit unsigned int")]
     fn dec_int_lit_is_tokenized_as_expected(input: &str, expected_output: u64) {
         // Given
-        let mut lexer = StringLexer::new(input);
+        let mut lexer = BasicLexer::new(input);
 
         // When
         let token = lexer.next_token().expect("tokenization failed");
@@ -563,7 +563,7 @@ mod tests {
     #[test_case("2.78281828459045e123", 2.78281828459045e123 ; "float with a big exponent")]
     fn float_lit_is_tokenized_as_expected(input: &str, expected_output: f64) {
         // Given
-        let mut lexer = StringLexer::new(input);
+        let mut lexer = BasicLexer::new(input);
 
         // When
         let token = lexer.next_token().expect("tokenization failed");
