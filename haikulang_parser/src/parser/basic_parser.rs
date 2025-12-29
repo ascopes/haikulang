@@ -45,7 +45,7 @@ impl<'a> BasicParser<'a> {
 
         let right = self.parse_multiplicative_expr()?;
 
-        self.to_node(
+        self.node(
             left.location,
             AstNodeKind::BinaryOp(Box::from(left), op, Box::from(right)),
         )
@@ -71,7 +71,7 @@ impl<'a> BasicParser<'a> {
 
         let right = self.parse_exponential_expr()?;
 
-        self.to_node(
+        self.node(
             left.location,
             AstNodeKind::BinaryOp(Box::from(left), op, Box::from(right)),
         )
@@ -91,7 +91,7 @@ impl<'a> BasicParser<'a> {
 
         let right = self.parse_atom()?;
 
-        self.to_node(
+        self.node(
             left.location,
             AstNodeKind::BinaryOp(Box::from(left), op, Box::from(right)),
         )
@@ -115,18 +115,16 @@ impl<'a> BasicParser<'a> {
                         self.advance();
                         expr
                     }
-                    _ => self.to_syntax_error("expected right parenthesis".to_string()),
+                    _ => self.unexpected("expected right parenthesis"),
                 }
             }
             TokenType::Ident => {
-                self.to_node(token.location, AstNodeKind::Identifier(token.raw.clone()))
+                self.node(token.location, AstNodeKind::Identifier(token.raw.clone()))
             }
-            TokenType::FloatLit(f) => self.to_literal(token.location, Literal::Float(f)),
-            TokenType::IntLit(i) => self.to_literal(token.location, Literal::Int(i)),
-            TokenType::StrLit(ref s) => self.to_literal(token.location, Literal::Str(s.clone())),
-            _ => self.to_syntax_error(
-                "expected nested expression, identifier, or literal value".to_string(),
-            ),
+            TokenType::FloatLit(f) => self.literal(token.location, Literal::Float(f)),
+            TokenType::IntLit(i) => self.literal(token.location, Literal::Int(i)),
+            TokenType::StrLit(ref s) => self.literal(token.location, Literal::Str(s.clone())),
+            _ => self.unexpected("expected nested expression, identifier, or literal value"),
         }
     }
 
@@ -144,22 +142,22 @@ impl<'a> BasicParser<'a> {
         }
     }
 
-    fn to_node(&self, location: Location, kind: AstNodeKind) -> ParserResult {
+    fn node(&self, location: Location, kind: AstNodeKind) -> ParserResult {
         Ok(AstNode { kind, location })
     }
 
-    fn to_literal(&self, location: Location, kind: Literal) -> ParserResult {
+    fn literal(&self, location: Location, kind: Literal) -> ParserResult {
         Ok(AstNode {
             kind: AstNodeKind::Literal(kind),
             location,
         })
     }
 
-    fn to_syntax_error(&self, message: String) -> ParserResult {
+    fn unexpected(&self, message: impl ToString) -> ParserResult {
         let token = self.peek()?.clone();
         let location = token.location;
         Err(ParserError {
-            kind: ParserErrorKind::SyntaxError(token, message),
+            kind: ParserErrorKind::SyntaxError(token, message.to_string()),
             location,
         })
     }
