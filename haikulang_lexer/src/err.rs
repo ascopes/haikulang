@@ -2,13 +2,12 @@ use crate::location::Location;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LexerError {
     pub kind: LexerErrorKind,
     pub raw: String,
     pub start_location: Location,
     pub end_location: Location,
-    pub cause: Option<Box<dyn Debug>>,
 }
 
 impl Display for LexerError {
@@ -22,25 +21,18 @@ impl Display for LexerError {
         }
 
         write!(f, " ({:?})", self.raw)?;
-
-        if let Some(cause) = &self.cause {
-            write!(f, " caused by {:?}", cause)?;
-        }
-
         Ok(())
     }
 }
 
 impl Error for LexerError {}
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum LexerErrorKind {
     UnrecognisedCharacter,
     UnrecognisedStringEscape,
-    IncompleteIntLiteral,
-    IncompleteFloatLiteral,
     UnexpectedEndOfLine,
-    OtherInvalidNumericLiteral,
+    InvalidNumericLiteral(String),
 }
 
 impl LexerErrorKind {
@@ -50,10 +42,8 @@ impl LexerErrorKind {
         match self {
             UnrecognisedCharacter => "unexpected character in input".to_string(),
             UnrecognisedStringEscape => "unrecognised escape sequence in string".to_string(),
-            IncompleteIntLiteral => "incomplete integer literal".to_string(),
-            IncompleteFloatLiteral => "incomplete float literal".to_string(),
             UnexpectedEndOfLine => "unexpected line end".to_string(),
-            OtherInvalidNumericLiteral => "failed to parse numeric literal".to_string(),
+            InvalidNumericLiteral(cause) => format!("failed to parse numeric literal: {}", cause),
         }
     }
 }

@@ -4,7 +4,7 @@ use haikulang_lexer::token::Token;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ParserError {
     pub kind: ParserErrorKind,
     pub location: Location,
@@ -23,7 +23,7 @@ impl Display for ParserError {
 
 impl Error for ParserError {}
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ParserErrorKind {
     LexerError(LexerError),
     SyntaxError(Token, String),

@@ -44,7 +44,6 @@ impl<'a> StringLexer<'a> {
                 raw: c.to_string(),
                 start_location: self.location,
                 end_location: self.location,
-                cause: None,
             }),
             None => Ok(Token {
                 token_type: TokenType::Eof,
@@ -88,28 +87,16 @@ impl<'a> StringLexer<'a> {
 
         if self.take_digits_with_radix(&mut digits, 2) == 0 {
             return Err(LexerError {
-                kind: LexerErrorKind::IncompleteIntLiteral,
+                kind: LexerErrorKind::InvalidNumericLiteral(
+                    "missing binary literal value".to_string(),
+                ),
                 raw: self.substring(location).to_string(),
                 start_location: location,
                 end_location: self.location,
-                cause: None,
             });
         }
 
-        match IntValue::from_str_radix(&digits, 2) {
-            Ok(value) => Ok(Token {
-                token_type: TokenType::IntLit(value),
-                raw: self.substring(location).to_string(),
-                location,
-            }),
-            Err(cause) => Err(LexerError {
-                kind: LexerErrorKind::OtherInvalidNumericLiteral,
-                raw: self.substring(location).to_string(),
-                start_location: location,
-                end_location: self.location,
-                cause: Some(Box::new(cause)),
-            }),
-        }
+        self.parse_int(&digits, 2, location)
     }
 
     // OCT_INT_LIT ::= ( '0o' | '0O' ) , [0-7] + ;
@@ -122,28 +109,16 @@ impl<'a> StringLexer<'a> {
 
         if self.take_digits_with_radix(&mut digits, 8) == 0 {
             return Err(LexerError {
-                kind: LexerErrorKind::IncompleteIntLiteral,
+                kind: LexerErrorKind::InvalidNumericLiteral(
+                    "missing octal literal value".to_string(),
+                ),
                 raw: self.substring(location).to_string(),
                 start_location: location,
                 end_location: self.location,
-                cause: None,
             });
         }
 
-        match IntValue::from_str_radix(&digits, 8) {
-            Ok(value) => Ok(Token {
-                token_type: TokenType::IntLit(value),
-                raw: self.substring(location).to_string(),
-                location,
-            }),
-            Err(cause) => Err(LexerError {
-                kind: LexerErrorKind::OtherInvalidNumericLiteral,
-                raw: self.substring(location).to_string(),
-                start_location: location,
-                end_location: self.location,
-                cause: Some(Box::new(cause)),
-            }),
-        }
+        self.parse_int(&digits, 8, location)
     }
 
     // HEX_INT_LIT ::= ( '0x' | '0X' ) , [0-9a-fA-F] + ;
@@ -156,28 +131,16 @@ impl<'a> StringLexer<'a> {
 
         if self.take_digits_with_radix(&mut digits, 16) == 0 {
             return Err(LexerError {
-                kind: LexerErrorKind::IncompleteIntLiteral,
+                kind: LexerErrorKind::InvalidNumericLiteral(
+                    "missing hexadecimal literal value".to_string(),
+                ),
                 raw: self.substring(location).to_string(),
                 start_location: location,
                 end_location: self.location,
-                cause: None,
             });
         }
 
-        match IntValue::from_str_radix(&digits, 16) {
-            Ok(value) => Ok(Token {
-                token_type: TokenType::IntLit(value),
-                raw: self.substring(location).to_string(),
-                location,
-            }),
-            Err(cause) => Err(LexerError {
-                kind: LexerErrorKind::OtherInvalidNumericLiteral,
-                raw: self.substring(location).to_string(),
-                start_location: location,
-                end_location: self.location,
-                cause: Some(Box::new(cause)),
-            }),
-        }
+        self.parse_int(&digits, 16, location)
     }
 
     // DEC_NUM_LIT   ::= DEC_FLOAT_LIT | DEC_INT_LIT ;
@@ -203,11 +166,12 @@ impl<'a> StringLexer<'a> {
                 && !matches!(self.peek(0), Some('e' | 'E'))
             {
                 return Err(LexerError {
-                    kind: LexerErrorKind::IncompleteFloatLiteral,
+                    kind: LexerErrorKind::InvalidNumericLiteral(
+                        "incomplete float mantissa".to_string(),
+                    ),
                     raw: self.substring(location).to_string(),
                     start_location: location,
                     end_location: self.location,
-                    cause: None,
                 });
             }
         }
@@ -226,45 +190,20 @@ impl<'a> StringLexer<'a> {
 
             if self.take_digits_with_radix(&mut number, 10) == 0 {
                 return Err(LexerError {
-                    kind: LexerErrorKind::IncompleteFloatLiteral,
+                    kind: LexerErrorKind::InvalidNumericLiteral(
+                        "incomplete float exponent".to_string(),
+                    ),
                     raw: self.substring(location).to_string(),
                     start_location: location,
                     end_location: self.location,
-                    cause: None,
                 });
             }
         }
 
         if is_float {
-            match FloatValue::from_str(&number) {
-                Ok(value) => Ok(Token {
-                    token_type: TokenType::FloatLit(value),
-                    raw: self.substring(location).to_string(),
-                    location,
-                }),
-                Err(cause) => Err(LexerError {
-                    kind: LexerErrorKind::OtherInvalidNumericLiteral,
-                    raw: self.substring(location).to_string(),
-                    start_location: location,
-                    end_location: self.location,
-                    cause: Some(Box::new(cause)),
-                }),
-            }
+            self.parse_float(&number, location)
         } else {
-            match IntValue::from_str(&number) {
-                Ok(value) => Ok(Token {
-                    token_type: TokenType::IntLit(value),
-                    raw: self.substring(location).to_string(),
-                    location,
-                }),
-                Err(cause) => Err(LexerError {
-                    kind: LexerErrorKind::OtherInvalidNumericLiteral,
-                    raw: self.substring(location).to_string(),
-                    start_location: location,
-                    end_location: self.location,
-                    cause: Some(Box::new(cause)),
-                }),
-            }
+            self.parse_int(&number, 10, location)
         }
     }
 
@@ -279,6 +218,38 @@ impl<'a> StringLexer<'a> {
         }
 
         offset
+    }
+
+    fn parse_int(&mut self, digits: &str, radix: u32, location: Location) -> LexerResult {
+        match IntValue::from_str_radix(&digits, radix) {
+            Ok(value) => Ok(Token {
+                token_type: TokenType::IntLit(value),
+                raw: self.substring(location).to_string(),
+                location,
+            }),
+            Err(cause) => Err(LexerError {
+                kind: LexerErrorKind::InvalidNumericLiteral(cause.to_string()),
+                raw: self.substring(location).to_string(),
+                start_location: location,
+                end_location: self.location,
+            }),
+        }
+    }
+
+    fn parse_float(&mut self, number: &str, location: Location) -> LexerResult {
+        match FloatValue::from_str(&number) {
+            Ok(value) => Ok(Token {
+                token_type: TokenType::FloatLit(value),
+                raw: self.substring(location).to_string(),
+                location,
+            }),
+            Err(cause) => Err(LexerError {
+                kind: LexerErrorKind::InvalidNumericLiteral(cause.to_string()),
+                raw: self.substring(location).to_string(),
+                start_location: location,
+                end_location: self.location,
+            }),
+        }
     }
 
     //      STR_LIT ::= '"' , ( STR_LIT_CHAR | STR_LIT_ESCAPE * ) , '"' ;
@@ -304,7 +275,6 @@ impl<'a> StringLexer<'a> {
                         raw: self.substring(start_location).to_string(),
                         start_location,
                         end_location: self.location,
-                        cause: None,
                     });
                 }
                 Some(c) => {
@@ -354,7 +324,6 @@ impl<'a> StringLexer<'a> {
                     raw: self.substring(location).to_string(),
                     start_location: location,
                     end_location: self.location,
-                    cause: None,
                 })
             }
         }

@@ -3,7 +3,7 @@ use crate::location::Location;
 pub type IntValue = u64;
 pub type FloatValue = f64;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TokenType {
     Eof,
 
@@ -28,7 +28,7 @@ pub enum TokenType {
     Semi,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub raw: String,
