@@ -9,6 +9,6 @@ pub trait Parser {
     fn parse(&mut self) -> ParserResult;
 }
 
-pub fn new_default_parser(lexer: &impl Lexer) -> impl Parser {
+pub fn new_default_parser(lexer: &mut impl Lexer) -> impl Parser {
     BasicParser::new(lexer)
 }

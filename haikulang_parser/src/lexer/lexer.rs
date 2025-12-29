@@ -8,6 +8,6 @@ pub trait Lexer {
     fn next_token(&mut self) -> LexerResult;
 }
 
-fn new_default_lexer(input: &str) -> impl Lexer {
+pub fn new_default_lexer(input: &str) -> impl Lexer {
     BasicLexer::new(input)
 }

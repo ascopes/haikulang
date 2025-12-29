@@ -1,6 +1,7 @@
 use crate::lexer::{FloatValue, IntValue, StrValue};
 use crate::location::Location;
 
+#[derive(Debug, PartialEq)]
 pub struct AstNode {
     pub kind: AstNodeKind,
     pub location: Location,
@@ -8,8 +9,9 @@ pub struct AstNode {
 
 #[derive(Debug, PartialEq)]
 pub enum AstNodeKind {
-    BinaryOp(Box<Self>, Operator, Box<Self>),
-    UnaryOp(Operator, Box<Self>),
+    BinaryOp(Box<AstNode>, Operator, Box<AstNode>),
+    UnaryOp(Operator, Box<AstNode>),
+    Identifier(String),
     Literal(Literal),
 }
 
@@ -21,4 +23,12 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Operator {}
+pub enum Operator {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    IntDiv,
+    Mod,
+    Pow,
+}

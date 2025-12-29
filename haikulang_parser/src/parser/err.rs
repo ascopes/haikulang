@@ -1,12 +1,12 @@
-use crate::lexer::LexerError;
+use crate::lexer::{LexerError, Token};
 use crate::location::Location;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Debug)]
 pub struct ParserError {
-    kind: ParserErrorKind,
-    location: Location,
+    pub kind: ParserErrorKind,
+    pub location: Location,
 }
 
 impl Display for ParserError {
@@ -24,6 +24,7 @@ impl Error for ParserError {}
 #[derive(Clone, Debug)]
 pub enum ParserErrorKind {
     LexerError(LexerError),
+    SyntaxError(Token, String),
 }
 
 impl Display for ParserErrorKind {
@@ -32,6 +33,7 @@ impl Display for ParserErrorKind {
 
         match self {
             LexerError(error) => write!(f, "{}", error),
+            SyntaxError(token, message) => write!(f, "Unexpected token {:?}: {}", token, message),
         }
     }
 }
