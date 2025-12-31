@@ -14,6 +14,16 @@ pub enum TokenType {
     IntLit(IntValue),
     FloatLit(FloatValue),
 
+    // Keywords
+    Fn,
+    Return,
+    If,
+    Else,
+    For,
+    While,
+    True,
+    False,
+
     // Operators
     Add,
     Sub,
@@ -26,6 +36,8 @@ pub enum TokenType {
     // Flow control and structures
     LeftParen,
     RightParen,
+    LeftBrace,
+    RightBrace,
     Semi,
 }
 

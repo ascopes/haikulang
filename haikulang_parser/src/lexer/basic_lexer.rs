@@ -30,7 +30,7 @@ impl<'a> BasicLexer<'a> {
 
         match self.peek(0) {
             Some('0'..='9') => self.tokenize_num_lit(),
-            Some('a'..='z' | 'A'..='Z' | '_') => self.tokenize_ident(),
+            Some('a'..='z' | 'A'..='Z' | '_') => self.tokenize_keyword_or_ident(),
             Some('"') => self.tokenize_str_lit(),
             Some('+') => self.tokenize_simple(TokenType::Add, 1),
             Some('-') => self.tokenize_simple(TokenType::Sub, 1),
@@ -337,15 +337,29 @@ impl<'a> BasicLexer<'a> {
     }
 
     // IDENT ::= [A-Za-z_] , [A-Za-z0-9_]+ ;
-    fn tokenize_ident(&mut self) -> LexerResult {
+    fn tokenize_keyword_or_ident(&mut self) -> LexerResult {
         let start_location = self.location;
 
         debug_assert!(matches!(self.peek(0), Some('a'..='z' | 'A'..='Z' | '_')));
         self.advance_while(|_, c| matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_'));
 
+        let raw = self.substring(start_location);
+
+        let token_type = match raw {
+            "fn" => TokenType::Fn,
+            "return" => TokenType::Return,
+            "if" => TokenType::If,
+            "else" => TokenType::Else,
+            "for" => TokenType::For,
+            "while" => TokenType::While,
+            "true" => TokenType::True,
+            "false" => TokenType::False,
+            _ => TokenType::Ident,
+        };
+
         Ok(Token {
-            token_type: TokenType::Ident,
-            raw: self.substring(start_location).to_string(),
+            token_type,
+            raw: raw.to_string(),
             location: start_location,
         })
     }
@@ -587,5 +601,155 @@ mod tests {
                 column: 1 + input.len()
             }
         );
+    }
+
+    #[test_case("0bhello" ; "literal with garbage value")]
+    #[test_case("0b"      ; "incomplete literal with EOF")]
+    fn invalid_bin_int_lit_emits_error(input: &str) {
+        // Given
+        let mut lexer = BasicLexer::new(input);
+
+        // When
+        let error = lexer.next_token().expect_err("tokenization succeeded");
+
+        // Then
+        assert_eq!(
+            error.start_location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(
+            error.end_location,
+            Location {
+                offset: 2,
+                line: 1,
+                column: 3
+            }
+        );
+        assert_eq!(
+            error.kind,
+            LexerErrorKind::InvalidNumericLiteral("missing binary literal value".to_string())
+        );
+        assert_eq!(&error.raw, "0b");
+    }
+
+    #[test_case("0ohello" ; "literal with garbage value")]
+    #[test_case("0o"      ; "incomplete literal with EOF")]
+    fn invalid_oct_int_lit_emits_error(input: &str) {
+        // Given
+        let mut lexer = BasicLexer::new(input);
+
+        // When
+        let error = lexer.next_token().expect_err("tokenization succeeded");
+
+        // Then
+        assert_eq!(
+            error.start_location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(
+            error.end_location,
+            Location {
+                offset: 2,
+                line: 1,
+                column: 3
+            }
+        );
+        assert_eq!(
+            error.kind,
+            LexerErrorKind::InvalidNumericLiteral("missing octal literal value".to_string())
+        );
+        assert_eq!(&error.raw, "0o");
+    }
+
+    #[test_case("0xhello" ; "literal with garbage value")]
+    #[test_case("0x"      ; "incomplete literal with EOF")]
+    fn invalid_hex_int_lit_emits_error(input: &str) {
+        // Given
+        let mut lexer = BasicLexer::new(input);
+
+        // When
+        let error = lexer.next_token().expect_err("tokenization succeeded");
+
+        // Then
+        assert_eq!(
+            error.start_location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(
+            error.end_location,
+            Location {
+                offset: 2,
+                line: 1,
+                column: 3
+            }
+        );
+        assert_eq!(
+            error.kind,
+            LexerErrorKind::InvalidNumericLiteral("missing hexadecimal literal value".to_string())
+        );
+        assert_eq!(&error.raw, "0x");
+    }
+
+    #[test]
+    fn too_long_int_lit_emits_error() {
+        // Given
+        let mut lexer = BasicLexer::new("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+
+        // When
+        let error = lexer.next_token().expect_err("tokenization succeeded");
+
+        // Then
+        assert_eq!(error.raw, "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+        assert_eq!(
+            error.kind,
+            LexerErrorKind::InvalidNumericLiteral(
+                "number too large to fit in target type".to_string()
+            )
+        );
+        assert_eq!(
+            error.start_location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(
+            error.end_location,
+            Location {
+                offset: 35,
+                line: 1,
+                column: 36
+            }
+        );
+    }
+
+    #[test]
+    fn invalid_num_lit_prefix_emitted_as_multiple_tokens() {
+        // Given
+        let mut lexer = BasicLexer::new("0lol123");
+
+        // When
+        let token1 = lexer.next_token().expect("tokenization failed");
+        let token2 = lexer.next_token().expect("tokenization failed");
+
+        // Then
+        assert_eq!(token1.raw, "0");
+        assert_eq!(token1.token_type, TokenType::IntLit(0));
+
+        assert_eq!(token2.raw, "lol123");
+        assert_eq!(token2.token_type, TokenType::Ident);
     }
 }

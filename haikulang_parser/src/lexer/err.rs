@@ -27,7 +27,7 @@ impl Display for LexerError {
 
 impl Error for LexerError {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum LexerErrorKind {
     UnrecognisedCharacter,
     UnrecognisedStringEscape,

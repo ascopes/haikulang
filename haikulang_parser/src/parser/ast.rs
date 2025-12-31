@@ -20,6 +20,7 @@ pub enum Literal {
     Float(FloatValue),
     Int(IntValue),
     Str(StrValue),
+    Bool(bool),
 }
 
 #[derive(Debug, PartialEq)]
