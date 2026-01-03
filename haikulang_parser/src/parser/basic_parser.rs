@@ -48,7 +48,7 @@ impl<'a> BasicParser<'a> {
 
         self.node(
             left.location,
-            AstNodeKind::BinaryOp(Box::from(left), op, Box::from(right)),
+            AstNodeKind::BinaryOperator(Box::from(left), op, Box::from(right)),
         )
     }
 
@@ -74,7 +74,7 @@ impl<'a> BasicParser<'a> {
 
         self.node(
             left.location,
-            AstNodeKind::BinaryOp(Box::from(left), op, Box::from(right)),
+            AstNodeKind::BinaryOperator(Box::from(left), op, Box::from(right)),
         )
     }
 
@@ -94,7 +94,7 @@ impl<'a> BasicParser<'a> {
 
         self.node(
             left.location,
-            AstNodeKind::BinaryOp(Box::from(left), op, Box::from(right)),
+            AstNodeKind::BinaryOperator(Box::from(left), op, Box::from(right)),
         )
     }
 
@@ -119,7 +119,7 @@ impl<'a> BasicParser<'a> {
 
         let value = self.parse_unary_expr()?;
 
-        self.node(location, AstNodeKind::UnaryOp(op, Box::from(value)))
+        self.node(location, AstNodeKind::UnaryOperator(op, Box::from(value)))
     }
 
     // atom ::= IDENT

@@ -11,8 +11,8 @@ pub type NestedAstNode = Box<AstNode>;
 
 #[derive(Debug, PartialEq)]
 pub enum AstNodeKind {
-    BinaryOp(NestedAstNode, BinaryOperator, NestedAstNode),
-    UnaryOp(UnaryOperator, NestedAstNode),
+    BinaryOperator(NestedAstNode, BinaryOperator, NestedAstNode),
+    UnaryOperator(UnaryOperator, NestedAstNode),
     Identifier(String),
     Literal(Literal),
 }
