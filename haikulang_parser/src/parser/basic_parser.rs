@@ -1,5 +1,4 @@
 use crate::lexer::{Lexer, LexerResult, Token, TokenType};
-use crate::location::Location;
 use crate::parser::{
     AstNode, AstNodeKind, BinaryOperator, Literal, Parser, ParserError, ParserErrorKind,
     ParserResult, UnaryOperator,
@@ -30,72 +29,92 @@ impl<'a> BasicParser<'a> {
         self.parse_additive_expr()
     }
 
-    // additive_expr ::= multiplicative_expr , ADD , additive_expr
-    //                 | multiplicative_expr , SUB , additive_expr
+
+
+    // additive_expr ::= additive_expr , ADD , additive_expr
+    //                 | additive_expr , SUB , additive_expr
     //                 | multiplicative_expr
     //                 ;
     fn parse_additive_expr(&mut self) -> ParserResult {
-        let left = self.parse_multiplicative_expr()?;
+        let mut node = self.parse_multiplicative_expr()?;
 
-        let op = match self.peek()?.token_type {
-            TokenType::Add => BinaryOperator::Add,
-            TokenType::Sub => BinaryOperator::Sub,
-            _ => return Ok(left),
-        };
-        self.advance();
+        loop {
+            let op = match self.peek()?.token_type {
+                TokenType::Add => BinaryOperator::Add,
+                TokenType::Sub => BinaryOperator::Sub,
+                _ => break,
+            };
+            self.advance();
 
-        let right = self.parse_additive_expr()?;
+            let right = self.parse_multiplicative_expr()?;
 
-        self.node(
-            left.location,
-            AstNodeKind::BinaryOperator(Box::from(left), op, Box::from(right)),
-        )
+            let location = node.location;
+
+            node = AstNode {
+                kind: AstNodeKind::BinaryOperator(Box::from(node), op, Box::from(right)),
+                location,
+            }
+        }
+
+        Ok(node)
     }
 
-    // multiplicative_expr ::= exponential_expr , MUL , multiplicative_expr
-    //                       | exponential_expr , DIV , multiplicative_expr
-    //                       | exponential_expr , INT_DIV , multiplicative_expr
-    //                       | exponential_expr , MOD , multiplicative_expr
+    // multiplicative_expr ::= multiplicative_expr , MUL , multiplicative_expr
+    //                       | multiplicative_expr , DIV , multiplicative_expr
+    //                       | multiplicative_expr , INT_DIV , multiplicative_expr
+    //                       | multiplicative_expr , MOD , multiplicative_expr
     //                       | exponential_expr
     //                       ;
     fn parse_multiplicative_expr(&mut self) -> ParserResult {
-        let left = self.parse_exponential_expr()?;
+        let mut node = self.parse_exponential_expr()?;
 
-        let op = match self.peek()?.token_type {
-            TokenType::Mul => BinaryOperator::Mul,
-            TokenType::Div => BinaryOperator::Div,
-            TokenType::IntDiv => BinaryOperator::IntDiv,
-            TokenType::Mod => BinaryOperator::Mod,
-            _ => return Ok(left),
-        };
-        self.advance();
+        loop {
+            let op = match self.peek()?.token_type {
+                TokenType::Mul => BinaryOperator::Mul,
+                TokenType::Div => BinaryOperator::Div,
+                TokenType::IntDiv => BinaryOperator::IntDiv,
+                TokenType::Mod => BinaryOperator::Mod,
+                _ => break,
+            };
+            self.advance();
 
-        let right = self.parse_multiplicative_expr()?;
+            let right = self.parse_exponential_expr()?;
 
-        self.node(
-            left.location,
-            AstNodeKind::BinaryOperator(Box::from(left), op, Box::from(right)),
-        )
+            let location = node.location;
+
+            node = AstNode {
+                kind: AstNodeKind::BinaryOperator(Box::from(node), op, Box::from(right)),
+                location,
+            }
+        }
+
+        Ok(node)
     }
 
-    // exponential_expr ::= unary_expr , POW , exponential_expr
+    // exponential_expr ::= exponential_expr , POW , exponential_expr
     //                    | unary_expr
     //                    ;
     fn parse_exponential_expr(&mut self) -> ParserResult {
-        let left = self.parse_unary_expr()?;
+        let mut node = self.parse_unary_expr()?;
 
-        let op = match self.peek()?.token_type {
-            TokenType::Pow => BinaryOperator::Pow,
-            _ => return Ok(left),
-        };
-        self.advance();
+        loop {
+            let op = match self.peek()?.token_type {
+                TokenType::Pow => BinaryOperator::Pow,
+                _ => break,
+            };
+            self.advance();
 
-        let right = self.parse_exponential_expr()?;
+            let right = self.parse_unary_expr()?;
 
-        self.node(
-            left.location,
-            AstNodeKind::BinaryOperator(Box::from(left), op, Box::from(right)),
-        )
+            let location = node.location;
+
+            node = AstNode {
+                kind: AstNodeKind::BinaryOperator(Box::from(node), op, Box::from(right)),
+                location,
+            }
+        }
+
+        Ok(node)
     }
 
     // unary_expr ::= ADD , unary_expr
@@ -119,7 +138,10 @@ impl<'a> BasicParser<'a> {
 
         let value = self.parse_unary_expr()?;
 
-        self.node(location, AstNodeKind::UnaryOperator(op, Box::from(value)))
+        Ok(AstNode {
+            kind: AstNodeKind::UnaryOperator(op, Box::from(value)),
+            location,
+        })
     }
 
     // atom ::= IDENT
@@ -143,15 +165,29 @@ impl<'a> BasicParser<'a> {
                     _ => self.unexpected("expected right parenthesis"),
                 }
             }
-            TokenType::Ident => {
-                self.node(token.location, AstNodeKind::Identifier(token.raw.clone()))
-            }
-            TokenType::FloatLit(f) => self.literal(token.location, Literal::Float(f)),
-            TokenType::IntLit(i) => self.literal(token.location, Literal::Int(i)),
-            TokenType::StrLit(ref s) => self.literal(token.location, Literal::Str(s.clone())),
+            TokenType::Ident => Ok(AstNode {
+                kind: AstNodeKind::Identifier(token.raw.clone()),
+                location: token.location,
+            }),
+            TokenType::FloatLit(f) => Ok(AstNode {
+                kind: AstNodeKind::Literal(Literal::Float(f)),
+                location: token.location,
+            }),
+            TokenType::IntLit(i) => Ok(AstNode {
+                kind: AstNodeKind::Literal(Literal::Int(i)),
+                location: token.location,
+            }),
+            TokenType::StrLit(ref s) => Ok(AstNode {
+                kind: AstNodeKind::Literal(Literal::Str(s.clone())),
+                location: token.location,
+            }),
             _ => self.unexpected("expected nested expression, identifier, or literal value"),
         }
     }
+
+    /////////////
+    // Helpers //
+    /////////////
 
     fn advance(&mut self) {
         self.current_token = self.lexer.next_token();
@@ -165,17 +201,6 @@ impl<'a> BasicParser<'a> {
                 kind: ParserErrorKind::LexerError(lexer_error.clone()),
             }),
         }
-    }
-
-    fn node(&self, location: Location, kind: AstNodeKind) -> ParserResult {
-        Ok(AstNode { kind, location })
-    }
-
-    fn literal(&self, location: Location, kind: Literal) -> ParserResult {
-        Ok(AstNode {
-            kind: AstNodeKind::Literal(kind),
-            location,
-        })
     }
 
     fn unexpected(&self, message: impl ToString) -> ParserResult {
