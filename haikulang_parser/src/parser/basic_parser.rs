@@ -1,7 +1,8 @@
 use crate::lexer::{Lexer, LexerResult, Token, TokenType};
 use crate::location::Location;
 use crate::parser::{
-    AstNode, AstNodeKind, Literal, Operator, Parser, ParserError, ParserErrorKind, ParserResult,
+    AstNode, AstNodeKind, BinaryOperator, Literal, Parser, ParserError, ParserErrorKind,
+    ParserResult, UnaryOperator,
 };
 
 pub(super) struct BasicParser<'a> {
@@ -29,16 +30,42 @@ impl<'a> BasicParser<'a> {
         self.parse_additive_expr()
     }
 
-    // additive_expr ::= multiplicative_expr , ADD , multiplicative_expr
-    //                 | multiplicative_expr , SUB , multiplicative_expr
+    // additive_expr ::= multiplicative_expr , ADD , additive_expr
+    //                 | multiplicative_expr , SUB , additive_expr
     //                 | multiplicative_expr
     //                 ;
     fn parse_additive_expr(&mut self) -> ParserResult {
         let left = self.parse_multiplicative_expr()?;
 
         let op = match self.peek()?.token_type {
-            TokenType::Add => Operator::Add,
-            TokenType::Sub => Operator::Sub,
+            TokenType::Add => BinaryOperator::Add,
+            TokenType::Sub => BinaryOperator::Sub,
+            _ => return Ok(left),
+        };
+        self.advance();
+
+        let right = self.parse_additive_expr()?;
+
+        self.node(
+            left.location,
+            AstNodeKind::BinaryOp(Box::from(left), op, Box::from(right)),
+        )
+    }
+
+    // multiplicative_expr ::= exponential_expr , MUL , multiplicative_expr
+    //                       | exponential_expr , DIV , multiplicative_expr
+    //                       | exponential_expr , INT_DIV , multiplicative_expr
+    //                       | exponential_expr , MOD , multiplicative_expr
+    //                       | exponential_expr
+    //                       ;
+    fn parse_multiplicative_expr(&mut self) -> ParserResult {
+        let left = self.parse_exponential_expr()?;
+
+        let op = match self.peek()?.token_type {
+            TokenType::Mul => BinaryOperator::Mul,
+            TokenType::Div => BinaryOperator::Div,
+            TokenType::IntDiv => BinaryOperator::IntDiv,
+            TokenType::Mod => BinaryOperator::Mod,
             _ => return Ok(left),
         };
         self.advance();
@@ -51,20 +78,14 @@ impl<'a> BasicParser<'a> {
         )
     }
 
-    // multiplicative_expr ::= exponential_expr , MUL , exponential_expr
-    //                       | exponential_expr , DIV , exponential_expr
-    //                       | exponential_expr , INT_DIV , exponential_expr
-    //                       | exponential_expr , MOD , exponential_expr
-    //                       | exponential_expr
-    //                       ;
-    fn parse_multiplicative_expr(&mut self) -> ParserResult {
-        let left = self.parse_exponential_expr()?;
+    // exponential_expr ::= unary_expr , POW , exponential_expr
+    //                    | unary_expr
+    //                    ;
+    fn parse_exponential_expr(&mut self) -> ParserResult {
+        let left = self.parse_unary_expr()?;
 
         let op = match self.peek()?.token_type {
-            TokenType::Mul => Operator::Mul,
-            TokenType::Div => Operator::Div,
-            TokenType::IntDiv => Operator::IntDiv,
-            TokenType::Mod => Operator::Mod,
+            TokenType::Pow => BinaryOperator::Pow,
             _ => return Ok(left),
         };
         self.advance();
@@ -77,24 +98,28 @@ impl<'a> BasicParser<'a> {
         )
     }
 
-    // exponential_expr ::= atom , POW , atom
-    //                    | atom
-    //                    ;
-    fn parse_exponential_expr(&mut self) -> ParserResult {
-        let left = self.parse_atom()?;
+    // unary_expr ::= ADD , unary_expr
+    //              | SUB , unary_expr
+    //              | NOT , unary_expr
+    //              | atom
+    //              ;
+    fn parse_unary_expr(&mut self) -> ParserResult {
+        let (location, token_type) = {
+            let token = self.peek()?;
+            (token.location, token.token_type.clone())
+        };
 
-        let op = match self.peek()?.token_type {
-            TokenType::Pow => Operator::Pow,
-            _ => return Ok(left),
+        let op = match token_type {
+            TokenType::Add => UnaryOperator::Pos,
+            TokenType::Sub => UnaryOperator::Neg,
+            TokenType::Not => UnaryOperator::Not,
+            _ => return self.parse_atom(),
         };
         self.advance();
 
-        let right = self.parse_atom()?;
+        let value = self.parse_unary_expr()?;
 
-        self.node(
-            left.location,
-            AstNodeKind::BinaryOp(Box::from(left), op, Box::from(right)),
-        )
+        self.node(location, AstNodeKind::UnaryOp(op, Box::from(value)))
     }
 
     // atom ::= IDENT

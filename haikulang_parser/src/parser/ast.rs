@@ -7,10 +7,12 @@ pub struct AstNode {
     pub location: Location,
 }
 
+pub type NestedAstNode = Box<AstNode>;
+
 #[derive(Debug, PartialEq)]
 pub enum AstNodeKind {
-    BinaryOp(Box<AstNode>, Operator, Box<AstNode>),
-    UnaryOp(Operator, Box<AstNode>),
+    BinaryOp(NestedAstNode, BinaryOperator, NestedAstNode),
+    UnaryOp(UnaryOperator, NestedAstNode),
     Identifier(String),
     Literal(Literal),
 }
@@ -24,7 +26,14 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Operator {
+pub enum UnaryOperator {
+    Pos,
+    Neg,
+    Not,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BinaryOperator {
     Add,
     Sub,
     Mul,
@@ -32,4 +41,10 @@ pub enum Operator {
     IntDiv,
     Mod,
     Pow,
+    Eq,
+    Ne,
+    Lt,
+    Lte,
+    Gt,
+    Gte,
 }
