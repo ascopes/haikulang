@@ -43,6 +43,8 @@ pub enum TokenType {
     Lte,
     Gt,
     Gte,
+    And,
+    Or,
 
     // Assignment
     Assign,

@@ -55,6 +55,14 @@ impl<'a> BasicLexer<'a> {
                 Some('=') => self.tokenize_simple(TokenType::Gte, 2),
                 _ => self.tokenize_simple(TokenType::Gt, 1),
             },
+            Some('&') => match self.peek(1) {
+                Some('&') => self.tokenize_simple(TokenType::And, 2),
+                _ => self.unrecognised_character(),
+            },
+            Some('|') => match self.peek(1) {
+                Some('|') => self.tokenize_simple(TokenType::Or, 2),
+                _ => self.unrecognised_character(),
+            },
             Some('=') => match self.peek(1) {
                 Some('=') => self.tokenize_simple(TokenType::Eq, 2),
                 _ => self.tokenize_simple(TokenType::Assign, 1),
@@ -66,12 +74,7 @@ impl<'a> BasicLexer<'a> {
             Some('[') => self.tokenize_simple(TokenType::LeftSq, 1),
             Some(']') => self.tokenize_simple(TokenType::RightSq, 1),
             Some(';') => self.tokenize_simple(TokenType::Semi, 1),
-            Some(c) => Err(LexerError {
-                kind: LexerErrorKind::UnrecognisedCharacter,
-                raw: c.to_string(),
-                start_location: self.location,
-                end_location: self.location,
-            }),
+            Some(_) => self.unrecognised_character(),
             None => Ok(Token {
                 token_type: TokenType::Eof,
                 raw: "".to_string(),
@@ -84,6 +87,17 @@ impl<'a> BasicLexer<'a> {
         while matches!(self.peek(0), Some(' ' | '\n' | '\r' | '\t')) {
             self.advance(1);
         }
+    }
+
+    fn unrecognised_character(&mut self) -> LexerResult {
+        let err = LexerError {
+            kind: LexerErrorKind::UnrecognisedCharacter,
+            raw: self.peek(0).unwrap().to_string(),
+            start_location: self.location,
+            end_location: self.location,
+        };
+        self.advance(1);
+        Err(err)
     }
 
     // NUM_LIT ::= BIN_INT_LIT
@@ -797,6 +811,8 @@ mod tests {
     #[test_case(      "<=",        TokenType::Lte ; "less than or equal operator")]
     #[test_case(       ">",         TokenType::Gt ; "greater than operator")]
     #[test_case(      ">=",        TokenType::Gte ; "greater than or equal operator")]
+    #[test_case(      "&&",        TokenType::And ; "and operator")]
+    #[test_case(      "||",         TokenType::Or ; "or operator")]
     #[test_case(       "=",     TokenType::Assign ; "assignment operator")]
     #[test_case(       "(",  TokenType::LeftParen ; "left parenthesis")]
     #[test_case(       ")", TokenType::RightParen ; "right parenthesis")]

@@ -47,4 +47,6 @@ pub enum BinaryOperator {
     Lte,
     Gt,
     Gte,
+    And,
+    Or,
 }
