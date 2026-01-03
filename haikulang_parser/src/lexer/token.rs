@@ -21,10 +21,12 @@ pub enum TokenType {
     Else,
     For,
     While,
+    Break,
+    Continue,
     True,
     False,
 
-    // Operators
+    // Arithmetic operators
     Add,
     Sub,
     Mul,
@@ -33,11 +35,25 @@ pub enum TokenType {
     Mod,
     Pow,
 
+    // Boolean operators
+    Not,
+    Eq,
+    Ne,
+    Lt,
+    Lte,
+    Gt,
+    Gte,
+
+    // Assignment
+    Assign,
+
     // Flow control and structures
     LeftParen,
     RightParen,
     LeftBrace,
     RightBrace,
+    LeftSq,
+    RightSq,
     Semi,
 }
 
