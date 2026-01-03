@@ -774,4 +774,62 @@ mod tests {
         assert_eq!(token2.raw, "lol123");
         assert_eq!(token2.token_type, TokenType::Ident);
     }
+
+    #[test_case(      "fn",         TokenType::Fn ; "'fn' keyword")]
+    #[test_case(  "return",     TokenType::Return ; "'return' keyword")]
+    #[test_case(      "if",         TokenType::If ; "'if' keyword")]
+    #[test_case(    "else",       TokenType::Else ; "'else' keyword")]
+    #[test_case(     "for",        TokenType::For ; "'for' keyword")]
+    #[test_case(   "while",      TokenType::While ; "'while' keyword")]
+    #[test_case(   "break",      TokenType::Break ; "'break' keyword")]
+    #[test_case("continue",   TokenType::Continue ; "'continue' keyword")]
+    #[test_case(       "+",        TokenType::Add ; "add operator")]
+    #[test_case(       "-",        TokenType::Sub ; "subtract operator")]
+    #[test_case(       "*",        TokenType::Mul ; "multiply operator")]
+    #[test_case(       "/",        TokenType::Div ; "divide operator")]
+    #[test_case(      "//",      TokenType::IntDiv ; "integer divide operator")]
+    #[test_case(       "%",        TokenType::Mod ; "modulo operator")]
+    #[test_case(      "**",        TokenType::Pow ; "power operator")]
+    #[test_case(       "!",        TokenType::Not ; "boolean negation operator")]
+    #[test_case(      "==",         TokenType::Eq ; "equality operator")]
+    #[test_case(      "!=",         TokenType::Ne ; "inequality operator")]
+    #[test_case(       "<",         TokenType::Lt ; "less than operator")]
+    #[test_case(      "<=",        TokenType::Lte ; "less than or equal operator")]
+    #[test_case(       ">",         TokenType::Gt ; "greater than operator")]
+    #[test_case(      ">=",        TokenType::Gte ; "greater than or equal operator")]
+    #[test_case(       "=",     TokenType::Assign ; "assignment operator")]
+    #[test_case(       "(",  TokenType::LeftParen ; "left parenthesis")]
+    #[test_case(       ")", TokenType::RightParen ; "right parenthesis")]
+    #[test_case(       "{",  TokenType::LeftBrace ; "left brace")]
+    #[test_case(       "}", TokenType::RightBrace ; "right brace")]
+    #[test_case(       "[",     TokenType::LeftSq ; "left square bracket")]
+    #[test_case(       "]",    TokenType::RightSq ; "right square bracket")]
+    #[test_case(       ";",       TokenType::Semi ; "semicolon")]
+    fn static_symbols_are_resolved_as_expected(input: &str, expected_type: TokenType) {
+        // Given
+        let mut lexer = BasicLexer::new(input);
+
+        // When
+        let token = lexer.next_token().expect("tokenization failed");
+
+        // Then
+        assert_eq!(token.raw, input);
+        assert_eq!(token.token_type, expected_type);
+        assert_eq!(
+            token.location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(
+            lexer.location,
+            Location {
+                offset: input.len(),
+                line: 1,
+                column: 1 + input.len()
+            }
+        );
+    }
 }
