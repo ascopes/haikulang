@@ -91,7 +91,7 @@ impl<'a> BasicLexer<'a> {
 
     fn unrecognised_character(&mut self) -> LexerResult {
         let err = LexerError {
-            kind: LexerErrorKind::UnrecognisedCharacter,
+            kind: LexerErrorKind::UnknownToken,
             raw: self.peek(0).unwrap().to_string(),
             location: self.location,
         };
@@ -304,7 +304,7 @@ impl<'a> BasicLexer<'a> {
                 Some('\r' | '\n') | None => {
                     // Newlines are not allowed in strings.
                     return Err(LexerError {
-                        kind: LexerErrorKind::UnexpectedEndOfLine,
+                        kind: LexerErrorKind::PrematureEndOfLine,
                         raw: self.substring(location).to_string(),
                         location,
                     });
@@ -352,7 +352,7 @@ impl<'a> BasicLexer<'a> {
             Some(_) | None => {
                 self.advance(1);
                 Err(LexerError {
-                    kind: LexerErrorKind::UnrecognisedStringEscape,
+                    kind: LexerErrorKind::UnknownStringEscape,
                     raw: self.substring(location).to_string(),
                     location: location,
                 })

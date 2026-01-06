@@ -16,9 +16,9 @@ impl Display for LexerError {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LexerErrorKind {
-    UnrecognisedCharacter,
-    UnrecognisedStringEscape,
-    UnexpectedEndOfLine,
+    UnknownToken,
+    UnknownStringEscape,
+    PrematureEndOfLine,
     InvalidNumericLiteral(String),
 }
 
@@ -26,10 +26,55 @@ impl Display for LexerErrorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use LexerErrorKind::*;
         match self {
-            UnrecognisedCharacter => write!(f, "unexpected character in input"),
-            UnrecognisedStringEscape => write!(f, "unrecognised escape sequence in string"),
-            UnexpectedEndOfLine => write!(f, "unexpected line end"),
+            UnknownToken => write!(f, "unknown token in input"),
+            UnknownStringEscape => write!(f, "unknown escape sequence in string"),
+            PrematureEndOfLine => write!(f, "premature end of line"),
             InvalidNumericLiteral(cause) => write!(f, "failed to parse numeric literal: {}", cause),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    #[test]
+    fn lexer_error_is_formatted_as_expected() {
+        // Given
+        let kind = LexerErrorKind::UnknownToken;
+        let raw = "unga bunga".to_string();
+        let location = Location {
+            offset: 512,
+            line: 32,
+            column: 64,
+        };
+        let err = LexerError {
+            kind: kind.clone(),
+            raw: raw.clone(),
+            location,
+        };
+
+        // When
+        let actual = format!("{}", err);
+
+        // Then
+        let expected = format!("{} at {} (\"unga bunga\")", kind, location);
+        assert_eq!(actual, expected);
+    }
+
+    #[test_case(LexerErrorKind::UnknownToken, "unknown token in input")]
+    #[test_case(
+        LexerErrorKind::UnknownStringEscape,
+        "unknown escape sequence in string"
+    )]
+    #[test_case(LexerErrorKind::PrematureEndOfLine, "premature end of line")]
+    #[test_case(LexerErrorKind::InvalidNumericLiteral("wahh!".to_string()), "failed to parse numeric literal: wahh!")]
+    fn lexer_error_kind_is_formatted_as_expected(kind: LexerErrorKind, expected: &str) {
+        // When
+        let actual = format!("{}", kind);
+
+        // Then
+        assert_eq!(actual, expected);
     }
 }
