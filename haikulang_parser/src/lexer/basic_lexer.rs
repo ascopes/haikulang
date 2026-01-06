@@ -93,8 +93,7 @@ impl<'a> BasicLexer<'a> {
         let err = LexerError {
             kind: LexerErrorKind::UnrecognisedCharacter,
             raw: self.peek(0).unwrap().to_string(),
-            start_location: self.location,
-            end_location: self.location,
+            location: self.location,
         };
         self.advance(1);
         Err(err)
@@ -132,8 +131,7 @@ impl<'a> BasicLexer<'a> {
                     "missing binary literal value".to_string(),
                 ),
                 raw: self.substring(location).to_string(),
-                start_location: location,
-                end_location: self.location,
+                location: location,
             });
         }
 
@@ -154,8 +152,7 @@ impl<'a> BasicLexer<'a> {
                     "missing octal literal value".to_string(),
                 ),
                 raw: self.substring(location).to_string(),
-                start_location: location,
-                end_location: self.location,
+                location: location,
             });
         }
 
@@ -176,8 +173,7 @@ impl<'a> BasicLexer<'a> {
                     "missing hexadecimal literal value".to_string(),
                 ),
                 raw: self.substring(location).to_string(),
-                start_location: location,
-                end_location: self.location,
+                location: location,
             });
         }
 
@@ -211,8 +207,7 @@ impl<'a> BasicLexer<'a> {
                         "incomplete float mantissa".to_string(),
                     ),
                     raw: self.substring(location).to_string(),
-                    start_location: location,
-                    end_location: self.location,
+                    location: location,
                 });
             }
         }
@@ -235,8 +230,7 @@ impl<'a> BasicLexer<'a> {
                         "incomplete float exponent".to_string(),
                     ),
                     raw: self.substring(location).to_string(),
-                    start_location: location,
-                    end_location: self.location,
+                    location: location,
                 });
             }
         }
@@ -271,8 +265,7 @@ impl<'a> BasicLexer<'a> {
             Err(cause) => Err(LexerError {
                 kind: LexerErrorKind::InvalidNumericLiteral(cause.to_string()),
                 raw: self.substring(location).to_string(),
-                start_location: location,
-                end_location: self.location,
+                location: location,
             }),
         }
     }
@@ -287,8 +280,7 @@ impl<'a> BasicLexer<'a> {
             Err(cause) => Err(LexerError {
                 kind: LexerErrorKind::InvalidNumericLiteral(cause.to_string()),
                 raw: self.substring(location).to_string(),
-                start_location: location,
-                end_location: self.location,
+                location: location,
             }),
         }
     }
@@ -296,7 +288,7 @@ impl<'a> BasicLexer<'a> {
     //      STR_LIT ::= '"' , ( STR_LIT_CHAR | STR_LIT_ESCAPE * ) , '"' ;
     // STR_LIT_CHAR ::= /* any char, except '"', '\r', '\n', or '\\' */ ;
     fn tokenize_str_lit(&mut self) -> LexerResult {
-        let start_location = self.location;
+        let location = self.location;
         let mut parsed_string = String::new();
 
         debug_assert!(matches!(self.peek(0), Some('"')));
@@ -313,9 +305,8 @@ impl<'a> BasicLexer<'a> {
                     // Newlines are not allowed in strings.
                     return Err(LexerError {
                         kind: LexerErrorKind::UnexpectedEndOfLine,
-                        raw: self.substring(start_location).to_string(),
-                        start_location,
-                        end_location: self.location,
+                        raw: self.substring(location).to_string(),
+                        location,
                     });
                 }
                 Some(c) => {
@@ -330,8 +321,8 @@ impl<'a> BasicLexer<'a> {
 
         Ok(Token {
             token_type: TokenType::StrLit(parsed_string),
-            raw: self.substring(start_location).to_string(),
-            location: start_location,
+            raw: self.substring(location).to_string(),
+            location,
         })
     }
 
@@ -363,8 +354,7 @@ impl<'a> BasicLexer<'a> {
                 Err(LexerError {
                     kind: LexerErrorKind::UnrecognisedStringEscape,
                     raw: self.substring(location).to_string(),
-                    start_location: location,
-                    end_location: self.location,
+                    location: location,
                 })
             }
         }
@@ -372,12 +362,12 @@ impl<'a> BasicLexer<'a> {
 
     // IDENT ::= [A-Za-z_] , [A-Za-z0-9_]+ ;
     fn tokenize_keyword_or_ident(&mut self) -> LexerResult {
-        let start_location = self.location;
+        let location = self.location;
 
         debug_assert!(matches!(self.peek(0), Some('a'..='z' | 'A'..='Z' | '_')));
         self.advance_while(|_, c| matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_'));
 
-        let raw = self.substring(start_location);
+        let raw = self.substring(location);
 
         let token_type = match raw {
             "fn" => TokenType::Fn,
@@ -396,7 +386,7 @@ impl<'a> BasicLexer<'a> {
         Ok(Token {
             token_type,
             raw: raw.to_string(),
-            location: start_location,
+            location: location,
         })
     }
 
@@ -459,8 +449,8 @@ impl<'a> BasicLexer<'a> {
         offset
     }
 
-    fn substring(&self, start_location: Location) -> &str {
-        &self.input[start_location.offset..self.location.offset]
+    fn substring(&self, location: Location) -> &str {
+        &self.input[location.offset..self.location.offset]
     }
 }
 
@@ -650,19 +640,11 @@ mod tests {
 
         // Then
         assert_eq!(
-            error.start_location,
+            error.location,
             Location {
                 offset: 0,
                 line: 1,
                 column: 1
-            }
-        );
-        assert_eq!(
-            error.end_location,
-            Location {
-                offset: 2,
-                line: 1,
-                column: 3
             }
         );
         assert_eq!(
@@ -683,19 +665,11 @@ mod tests {
 
         // Then
         assert_eq!(
-            error.start_location,
+            error.location,
             Location {
                 offset: 0,
                 line: 1,
                 column: 1
-            }
-        );
-        assert_eq!(
-            error.end_location,
-            Location {
-                offset: 2,
-                line: 1,
-                column: 3
             }
         );
         assert_eq!(
@@ -716,19 +690,11 @@ mod tests {
 
         // Then
         assert_eq!(
-            error.start_location,
+            error.location,
             Location {
                 offset: 0,
                 line: 1,
                 column: 1
-            }
-        );
-        assert_eq!(
-            error.end_location,
-            Location {
-                offset: 2,
-                line: 1,
-                column: 3
             }
         );
         assert_eq!(
@@ -755,19 +721,11 @@ mod tests {
             )
         );
         assert_eq!(
-            error.start_location,
+            error.location,
             Location {
                 offset: 0,
                 line: 1,
                 column: 1
-            }
-        );
-        assert_eq!(
-            error.end_location,
-            Location {
-                offset: 35,
-                line: 1,
-                column: 36
             }
         );
     }

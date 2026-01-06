@@ -29,8 +29,6 @@ impl<'a> BasicParser<'a> {
         self.parse_additive_expr()
     }
 
-
-
     // additive_expr ::= additive_expr , ADD , additive_expr
     //                 | additive_expr , SUB , additive_expr
     //                 | multiplicative_expr
@@ -197,7 +195,7 @@ impl<'a> BasicParser<'a> {
         match &self.current_token {
             Ok(token) => Ok(token),
             Err(lexer_error) => Err(ParserError {
-                location: lexer_error.start_location,
+                location: lexer_error.location,
                 kind: ParserErrorKind::LexerError(lexer_error.clone()),
             }),
         }
