@@ -24,13 +24,106 @@ impl<'a> BasicParser<'a> {
         }
     }
 
-    // expr ::= additive_expr ;
+    /////////////////
+    // Expressions //
+    /////////////////
+
+    // expr ::= disjunction_expr ;
+    #[inline]
     fn parse_expr(&mut self) -> ParserResult {
-        self.parse_additive_expr()
+        self.parse_disjunction_expr()
     }
 
-    // additive_expr ::= additive_expr , ADD , additive_expr
-    //                 | additive_expr , SUB , additive_expr
+    // disjunction_expr ::= conjunction_expr , OR , disjunction_expr
+    //                    | conjunction_expr
+    //                    ;
+    fn parse_disjunction_expr(&mut self) -> ParserResult {
+        let mut node = self.parse_conjunction_expr()?;
+
+        loop {
+            let op = match self.peek()?.token_type {
+                TokenType::Or => BinaryOperator::Or,
+                _ => break,
+            };
+            self.advance();
+
+            let right = self.parse_conjunction_expr()?;
+
+            let location = node.location;
+
+            node = AstNode {
+                kind: AstNodeKind::BinaryOperator(Box::from(node), op, Box::from(right)),
+                location,
+            }
+        }
+
+        Ok(node)
+    }
+
+    // conjunction_expr ::= comparative_expr , AND , conjunction_expr
+    //                    | comparative_expr
+    //                    ;
+    fn parse_conjunction_expr(&mut self) -> ParserResult {
+        let mut node = self.parse_comparative_expr()?;
+
+        loop {
+            let op = match self.peek()?.token_type {
+                TokenType::And => BinaryOperator::And,
+                _ => break,
+            };
+            self.advance();
+
+            let right = self.parse_comparative_expr()?;
+
+            let location = node.location;
+
+            node = AstNode {
+                kind: AstNodeKind::BinaryOperator(Box::from(node), op, Box::from(right)),
+                location,
+            }
+        }
+
+        Ok(node)
+    }
+
+    // comparative_expr ::= additive_expr , LT , comparative_expr
+    //                    | additive_expr , LTE , comparative_expr
+    //                    | additive_expr , GT , comparative_expr
+    //                    | additive_expr , GTE , comparative_expr
+    //                    | additive_expr , EQ , comparative_expr
+    //                    | additive_expr , NE , comparative_expr
+    //                    | additive_expr
+    //                    ;
+    fn parse_comparative_expr(&mut self) -> ParserResult {
+        let mut node = self.parse_additive_expr()?;
+
+        loop {
+            let op = match self.peek()?.token_type {
+                TokenType::Lt => BinaryOperator::Lt,
+                TokenType::Lte => BinaryOperator::Lte,
+                TokenType::Gt => BinaryOperator::Gt,
+                TokenType::Gte => BinaryOperator::Gte,
+                TokenType::Eq => BinaryOperator::Eq,
+                TokenType::Ne => BinaryOperator::Ne,
+                _ => break,
+            };
+            self.advance();
+
+            let right = self.parse_comparative_expr()?;
+
+            let location = node.location;
+
+            node = AstNode {
+                kind: AstNodeKind::BinaryOperator(Box::from(node), op, Box::from(right)),
+                location,
+            }
+        }
+
+        Ok(node)
+    }
+
+    // additive_expr ::= multiplicative_expr , ADD , additive_expr
+    //                 | multiplicative_expr , SUB , additive_expr
     //                 | multiplicative_expr
     //                 ;
     fn parse_additive_expr(&mut self) -> ParserResult {
@@ -57,10 +150,10 @@ impl<'a> BasicParser<'a> {
         Ok(node)
     }
 
-    // multiplicative_expr ::= multiplicative_expr , MUL , multiplicative_expr
-    //                       | multiplicative_expr , DIV , multiplicative_expr
-    //                       | multiplicative_expr , INT_DIV , multiplicative_expr
-    //                       | multiplicative_expr , MOD , multiplicative_expr
+    // multiplicative_expr ::= exponential_expr , MUL , multiplicative_expr
+    //                       | exponential_expr , DIV , multiplicative_expr
+    //                       | exponential_expr , INT_DIV , multiplicative_expr
+    //                       | exponential_expr , MOD , multiplicative_expr
     //                       | exponential_expr
     //                       ;
     fn parse_multiplicative_expr(&mut self) -> ParserResult {
@@ -89,7 +182,7 @@ impl<'a> BasicParser<'a> {
         Ok(node)
     }
 
-    // exponential_expr ::= exponential_expr , POW , exponential_expr
+    // exponential_expr ::= unary_expr , POW , exponential_expr
     //                    | unary_expr
     //                    ;
     fn parse_exponential_expr(&mut self) -> ParserResult {
