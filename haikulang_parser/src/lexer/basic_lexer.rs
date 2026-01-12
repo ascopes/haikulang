@@ -747,6 +747,50 @@ mod tests {
         assert_eq!(token2.token_type, TokenType::Ident);
     }
 
+    #[test_case(            "hello" ; "lowercase word")]
+    #[test_case(            "HELLO" ; "uppercase word")]
+    #[test_case("numbers1234567890" ; "alphanuneric")]
+    #[test_case(    "stringBuilder" ; "camelcase")]
+    #[test_case(    "StringBuilder" ; "pascal case")]
+    #[test_case(   "string_builder" ; "snake case")]
+    #[test_case(             "_foo" ; "leading underscore")]
+    #[test_case(             "foo_" ; "trailing underscore")]
+    #[test_case(                "_" ; "underscore")]
+    #[test_case(        "fn_not_kw" ; "starts with 'fn' keyword")]
+    #[test_case(      "returnNotKw" ; "starts with 'return' keyword")]
+    #[test_case(         "not_kwif" ; "ends with 'if' keyword")]
+    #[test_case(           "whiffy" ; "contains 'if' keyword")]
+    #[test_case(           "RETURN" ; "capitalised keyword")]
+    #[test_case(              "_if" ; "underscore then keyword")]
+    #[test_case(              "if_" ; "keyword then underscore")]
+    fn identifiers_are_resolved_as_expected(input: &str) {
+        // Given
+        let mut lexer = BasicLexer::new(input);
+
+        // When
+        let token = lexer.next_token().expect("tokenization failed");
+
+        // Then
+        assert_eq!(token.raw, input);
+        assert_eq!(token.token_type, TokenType::Ident);
+        assert_eq!(
+            token.location,
+            Location {
+                offset: 0,
+                line: 1,
+                column: 1
+            }
+        );
+        assert_eq!(
+            lexer.location,
+            Location {
+                offset: input.len(),
+                line: 1,
+                column: 1 + input.len()
+            }
+        );
+    }
+
     #[test_case(      "fn",         TokenType::Fn ; "'fn' keyword")]
     #[test_case(  "return",     TokenType::Return ; "'return' keyword")]
     #[test_case(      "if",         TokenType::If ; "'if' keyword")]
