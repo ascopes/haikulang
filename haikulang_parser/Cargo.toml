@@ -1,5 +1,5 @@
 [package]
-name = "haikulang_lexer"
+name = "haikulang_parser"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,6 +7,8 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+chumsky.workspace = true
+logos = { features = ["debug"], workspace = true }
 
 [dev-dependencies]
 test-case.workspace = true
