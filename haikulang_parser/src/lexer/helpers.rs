@@ -71,17 +71,17 @@ pub fn parse_int_lit(lex: &mut logos::Lexer<Token>) -> Result<IntLit, LexerError
     let text = lex.slice();
 
     if text.starts_with("0b") || text.starts_with("0B") {
-        parse_from_int_lit(&text[2..text.len()], 2)
+        parse_int_lit_radix(&text[2..text.len()], 2)
     } else if text.starts_with("0o") || text.starts_with("0O") {
-        parse_from_int_lit(&text[2..text.len()], 8)
+        parse_int_lit_radix(&text[2..text.len()], 8)
     } else if text.starts_with("0x") || text.starts_with("0X") {
-        parse_from_int_lit(&text[2..text.len()], 16)
+        parse_int_lit_radix(&text[2..text.len()], 16)
     } else {
-        parse_from_int_lit(&text, 10)
+        parse_int_lit_radix(&text, 10)
     }
 }
 
-fn parse_from_int_lit(text: &str, radix: u32) -> Result<IntLit, LexerError> {
+fn parse_int_lit_radix(text: &str, radix: u32) -> Result<IntLit, LexerError> {
     // Remove any underscores, we do not keep them in the final value.
     // In theory this could be malformed, but we validate the format in the regex before
     // getting this far.
