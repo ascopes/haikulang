@@ -271,6 +271,8 @@ pub enum Token {
 
     #[token(">=")]
     GreaterEq,
+
+    Eof,
 }
 
 #[cfg(test)]

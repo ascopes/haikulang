@@ -1,3 +1,8 @@
-pub mod error;
+mod error;
 mod helpers;
-pub mod token;
+mod token;
+mod token_stream;
+
+pub use error::*;
+pub use token::*;
+pub use token_stream::*;

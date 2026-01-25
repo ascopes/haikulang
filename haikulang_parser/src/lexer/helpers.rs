@@ -48,7 +48,7 @@ pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StringLit, LexerErr
 }
 
 #[inline]
-fn parse_string_escape_char<'a>(text: &str, offset: usize) -> Result<(&str, usize), LexerError> {
+fn parse_string_escape_char(text: &str, offset: usize) -> Result<(&str, usize), LexerError> {
     // In theory this could be malformed, but we validate the format for the most part in the regex
     // before getting this far, so we can make assumptions here.
     match &text[offset..offset + 1] {
