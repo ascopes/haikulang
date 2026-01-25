@@ -343,6 +343,7 @@ impl<'src> Parser<'src> {
         atom
     }
 
+    #[inline]
     fn current(&mut self) -> Result<Spanned<Token>, Spanned<ParserError>> {
         self.stream.current().map_err(|err| {
             let new_err = ParserError::LexerError(err.value().clone());
@@ -350,17 +351,17 @@ impl<'src> Parser<'src> {
         })
     }
 
+    #[inline]
     fn advance(&mut self) {
         self.stream.advance();
     }
 }
 
-#[inline(always)]
+#[inline]
 fn wrap(node: AstNode, span: Span) -> ParserResult {
     Ok(Spanned::new(node, span))
 }
 
-#[inline(always)]
 fn syntax_error(token: Spanned<Token>, message: impl ToString) -> ParserResult {
     let err = ParserError::SyntaxError(token.value(), message.to_string());
     Err(Spanned::new(err, token.span()))
