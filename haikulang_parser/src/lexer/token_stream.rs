@@ -6,27 +6,22 @@ type LexerResult = Result<Spanned<Token>, Spanned<LexerError>>;
 
 pub struct TokenStream<'src> {
     iter: SpannedIter<'src, Token>,
-    peeked: Option<LexerResult>,
+    next: LexerResult,
 }
 
 impl<'src> TokenStream<'src> {
     pub fn new(source: &'src str) -> Self {
-        let iter = Token::lexer(source).spanned();
-        Self { iter, peeked: None }
+        let mut iter = Token::lexer(source).spanned();
+        let next = Self::take_next(&mut iter);
+        Self { iter, next }
     }
 
-    pub fn next(&mut self) -> LexerResult {
-        self.peeked
-            .take()
-            .unwrap_or_else(|| Self::take_next(&mut self.iter))
+    pub fn advance(&mut self) {
+        self.next = Self::take_next(&mut self.iter);
     }
 
-    pub fn peek(&mut self) -> LexerResult {
-        if self.peeked.is_none() {
-            let next = Self::take_next(&mut self.iter);
-            self.peeked = Some(next);
-        }
-        self.peeked.clone().unwrap()
+    pub fn current(&mut self) -> Result<Spanned<Token>, Spanned<LexerError>> {
+        self.next.clone()
     }
 
     fn take_next(iter: &mut SpannedIter<'src, Token>) -> LexerResult {

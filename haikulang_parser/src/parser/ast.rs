@@ -1,8 +1,9 @@
 use crate::lexer::{FloatLit, IntLit, StringLit};
+use crate::span::Spanned;
 
 #[derive(Clone, Debug)]
 pub enum AstNode {
-    BinOp(InnerAstNode, BinaryOp, InnerAstNode),
+    BinaryOp(InnerAstNode, BinaryOp, InnerAstNode),
     UnaryOp(UnaryOp, InnerAstNode),
     Float(FloatLit),
     Int(IntLit),
@@ -11,7 +12,7 @@ pub enum AstNode {
     Var(String),
 }
 
-pub type InnerAstNode = Box<AstNode>;
+pub type InnerAstNode = Box<Spanned<AstNode>>;
 
 #[derive(Clone, Debug)]
 pub enum BinaryOp {
@@ -21,6 +22,21 @@ pub enum BinaryOp {
     Div,
     Mod,
     Pow,
+    BinaryAnd,
+    BinaryOr,
+    BinaryXor,
+    BinaryNot,
+    BinaryShl,
+    BinaryShr,
+    BoolAnd,
+    BoolOr,
+    BoolNot,
+    Eq,
+    NotEq,
+    Less,
+    LessEq,
+    Greater,
+    GreaterEq,
 }
 
 #[derive(Clone, Debug)]

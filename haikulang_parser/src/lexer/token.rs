@@ -6,7 +6,6 @@ pub type StringLit = String;
 pub type IntLit = u64;
 pub type FloatLit = f64;
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, Logos, PartialEq)]
 #[logos(error = LexerError)]
 #[logos(skip "[ \n\r\t]+")]

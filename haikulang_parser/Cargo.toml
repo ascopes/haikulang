@@ -7,7 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-logos = { features = ["debug"], workspace = true }
+logos.workspace = true
 
 [dev-dependencies]
 test-case.workspace = true
