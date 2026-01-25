@@ -1,14 +1,8 @@
-mod basic_lexer;
-mod err;
-mod lexer;
+mod error;
+mod helpers;
 mod token;
+mod token_stream;
 
-#[cfg(test)]
-mod mock_lexer;
-
-pub use err::*;
-pub use lexer::*;
+pub use error::*;
 pub use token::*;
-
-#[cfg(test)]
-pub use mock_lexer::*;
+pub use token_stream::*;

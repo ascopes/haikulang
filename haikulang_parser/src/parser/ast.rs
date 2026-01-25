@@ -1,52 +1,48 @@
-use crate::lexer::{FloatValue, IntValue, StrValue};
-use crate::location::Location;
+use crate::lexer::{FloatLit, IntLit, StringLit};
+use crate::span::Spanned;
 
-#[derive(Debug, PartialEq)]
-pub struct AstNode {
-    pub kind: AstNodeKind,
-    pub location: Location,
-}
-
-pub type NestedAstNode = Box<AstNode>;
-
-#[derive(Debug, PartialEq)]
-pub enum AstNodeKind {
-    BinaryOperator(NestedAstNode, BinaryOperator, NestedAstNode),
-    UnaryOperator(UnaryOperator, NestedAstNode),
-    Identifier(String),
-    Literal(Literal),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Literal {
-    Float(FloatValue),
-    Int(IntValue),
-    Str(StrValue),
+#[derive(Clone, Debug)]
+pub enum AstNode {
+    BinaryOp(InnerAstNode, BinaryOp, InnerAstNode),
+    UnaryOp(UnaryOp, InnerAstNode),
+    Float(FloatLit),
+    Int(IntLit),
     Bool(bool),
+    String(StringLit),
+    Var(String),
 }
 
-#[derive(Debug, PartialEq)]
-pub enum UnaryOperator {
-    Pos,
-    Neg,
-    Not,
-}
+pub type InnerAstNode = Box<Spanned<AstNode>>;
 
-#[derive(Debug, PartialEq)]
-pub enum BinaryOperator {
+#[derive(Clone, Debug)]
+pub enum BinaryOp {
     Add,
     Sub,
     Mul,
     Div,
-    IntDiv,
     Mod,
     Pow,
+    BinaryAnd,
+    BinaryOr,
+    BinaryXor,
+    BinaryNot,
+    BinaryShl,
+    BinaryShr,
+    BoolAnd,
+    BoolOr,
+    BoolNot,
     Eq,
-    Ne,
-    Lt,
-    Lte,
-    Gt,
-    Gte,
-    And,
-    Or,
+    NotEq,
+    Less,
+    LessEq,
+    Greater,
+    GreaterEq,
+}
+
+#[derive(Clone, Debug)]
+pub enum UnaryOp {
+    Plus,
+    Minus,
+    Not,
+    Invert,
 }

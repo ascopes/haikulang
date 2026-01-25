@@ -1,5 +1,5 @@
 [package]
-name = "haikulang_parser"
+name = "haikulang_cli"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,12 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-logos.workspace = true
-
-[dev-dependencies]
-test-case.workspace = true
-
-[lib]
+haikulang_parser = { path = "../haikulang_parser" }
 
 [lints]
 workspace = true
