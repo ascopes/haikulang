@@ -8,6 +8,7 @@ version.workspace = true
 
 [dependencies]
 haikulang_parser = { path = "../haikulang_parser" }
+rustyline.workspace = true
 
 [lints]
 workspace = true

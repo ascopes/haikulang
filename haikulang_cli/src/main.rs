@@ -1,29 +1,20 @@
 use haikulang_parser::lexer::*;
 use haikulang_parser::parser::*;
-use std::io;
-use std::io::Write;
+use rustyline::{DefaultEditor, error::ReadlineError};
 
-fn main() -> io::Result<()> {
-    let stdin = io::stdin();
-    let mut stdout = io::stdout().lock();
+fn main() -> Result<(), ReadlineError> {
+    let mut editor = DefaultEditor::new()?;
 
     loop {
-        print!(">>> ");
-        stdout.flush()?;
-
-        let mut input = String::new();
-        stdin.read_line(&mut input)?;
-
-        let tokens = TokenStream::new(input.as_str());
+        let line = editor.readline(">>> ")?;
+        let tokens = TokenStream::new(line.as_str());
 
         let mut parser = Parser::new(tokens);
 
-        let output = match parser.parse_expr() {
-            Ok(ast) => visit(ast.value()),
-            Err(err) => panic!("{:?}", err),
+        match parser.parse_expr() {
+            Ok(ast) => println!("{}", visit(ast.value())),
+            Err(err) => println!("Error: {:?} at {}", err.value(), err.span()),
         };
-
-        println!("{}\n", output);
     }
 }
 

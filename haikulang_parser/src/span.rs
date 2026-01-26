@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Copy, Debug)]
 pub struct Span {
     start: usize,
@@ -19,6 +21,12 @@ impl Span {
 
     pub fn to(&self, other: Self) -> Self {
         Self::new(self.start, other.end)
+    }
+}
+
+impl fmt::Display for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.start, self.end)
     }
 }
 
