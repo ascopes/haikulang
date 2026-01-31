@@ -27,133 +27,79 @@ impl<'src> Parser<'src> {
     //                | bool_and_expr
     //                ;
     fn parse_bool_or_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_bool_and_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::BoolOr => BinaryOp::BoolOr,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_bool_and_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::BoolOr => Some(BinaryOp::BoolOr),
+                _ => None,
+            },
+            Self::parse_bool_and_expr,
+        )
     }
 
     // bool_and_expr ::= binary_or_expr , AND , bool_and_expr
     //                 | binary_or_expr
     //                 ;
     fn parse_bool_and_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_binary_or_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::BoolAnd => BinaryOp::BoolAnd,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_binary_or_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::BoolAnd => Some(BinaryOp::BoolAnd),
+                _ => None,
+            },
+            Self::parse_binary_or_expr,
+        )
     }
 
     // binary_or_expr ::= binary_xor_expr , BINARY_OR , binary_xor_expr
     //                  | binary_xor_expr
     //                  ;
     fn parse_binary_or_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_binary_xor_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::BinaryOr => BinaryOp::BinaryOr,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_binary_xor_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::BinaryOr => Some(BinaryOp::BinaryOr),
+                _ => None,
+            },
+            Self::parse_binary_xor_expr,
+        )
     }
 
     // binary_xor_expr ::= binary_and_expr , BINARY_XOR , binary_xor_expr
     //                   | binary_and_expr
     //                   ;
     fn parse_binary_xor_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_binary_and_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::BinaryXor => BinaryOp::BinaryXor,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_binary_and_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::BinaryXor => Some(BinaryOp::BinaryXor),
+                _ => None,
+            },
+            Self::parse_binary_and_expr,
+        )
     }
 
     // binary_and_expr ::= equality_expr , AND , binary_and_expr
     //                   | equality_expr
     //                   ;
     fn parse_binary_and_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_equality_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::BinaryAnd => BinaryOp::BinaryAnd,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_equality_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::BinaryAnd => Some(BinaryOp::BinaryAnd),
+                _ => None,
+            },
+            Self::parse_equality_expr,
+        )
     }
 
     // equality_expr ::= compare_expr , EQ , equality_expr
     //                 | compare_expr , NOT_EQ , equality_expr
     //                 ;
     fn parse_equality_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_compare_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::Eq => BinaryOp::Eq,
-                Token::NotEq => BinaryOp::NotEq,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_compare_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::Eq => Some(BinaryOp::Eq),
+                Token::NotEq => Some(BinaryOp::NotEq),
+                _ => None,
+            },
+            Self::parse_compare_expr,
+        )
     }
 
     // compare_expr ::= binary_shift_expr , LESS , compare_expr
@@ -163,25 +109,16 @@ impl<'src> Parser<'src> {
     //                | binary_shift_expr
     //                ;
     fn parse_compare_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_binary_shift_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::Less => BinaryOp::Less,
-                Token::LessEq => BinaryOp::LessEq,
-                Token::Greater => BinaryOp::Greater,
-                Token::GreaterEq => BinaryOp::GreaterEq,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_binary_shift_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::Less => Some(BinaryOp::Less),
+                Token::LessEq => Some(BinaryOp::LessEq),
+                Token::Greater => Some(BinaryOp::Greater),
+                Token::GreaterEq => Some(BinaryOp::GreaterEq),
+                _ => None,
+            },
+            Self::parse_binary_shift_expr,
+        )
     }
 
     // binary_shift_expr ::= sum_expr , BINARY_SHL , binary_shift_expr
@@ -189,23 +126,14 @@ impl<'src> Parser<'src> {
     //                     | sum_expr
     //                     ;
     fn parse_binary_shift_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_sum_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::BinaryShl => BinaryOp::BinaryShl,
-                Token::BinaryShr => BinaryOp::BinaryShr,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_sum_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::BinaryShl => Some(BinaryOp::BinaryShl),
+                Token::BinaryShr => Some(BinaryOp::BinaryShr),
+                _ => None,
+            },
+            Self::parse_sum_expr,
+        )
     }
 
     // sum_expr ::= factor_expr , ADD , sum_expr
@@ -213,23 +141,14 @@ impl<'src> Parser<'src> {
     //            | factor_expr
     //            ;
     fn parse_sum_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_factor_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::Add => BinaryOp::Add,
-                Token::Sub => BinaryOp::Sub,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_factor_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::Add => Some(BinaryOp::Add),
+                Token::Sub => Some(BinaryOp::Sub),
+                _ => None,
+            },
+            Self::parse_factor_expr,
+        )
     }
 
     // factor_expr ::= pow_expr , MUL , factor_expr
@@ -238,31 +157,45 @@ impl<'src> Parser<'src> {
     //               | pow_expr
     //               ;
     fn parse_factor_expr(&mut self) -> ParserResult {
-        let mut left = self.parse_pow_expr()?;
-
-        loop {
-            let op = match self.current()?.value() {
-                Token::Mul => BinaryOp::Mul,
-                Token::Div => BinaryOp::Div,
-                Token::Mod => BinaryOp::Mod,
-                _ => break,
-            };
-            self.advance();
-
-            let right = self.parse_pow_expr()?;
-            let span = left.span().to(right.span());
-            let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
-            left = Spanned::new(node, span);
-        }
-
-        Ok(left)
+        self.parse_binary_op_left_assoc(
+            |token| match token {
+                Token::Mul => Some(BinaryOp::Mul),
+                Token::Div => Some(BinaryOp::Div),
+                Token::Mod => Some(BinaryOp::Mod),
+                _ => None,
+            },
+            Self::parse_unary_expr,
+        )
     }
 
-    // pow_expr ::= unary_expr , POW , pow_expr
-    //            | unary_expr
+    // unary_expr ::= ADD , unary_expr
+    //              | SUB , unary_expr
+    //              | BINARY_NOT , unary_expr
+    //              | BOOL_NOT , unary_expr
+    //              | pow_expr
+    //              ;
+    fn parse_unary_expr(&mut self) -> ParserResult {
+        let first = self.current()?;
+        let op = match first.value() {
+            Token::Add => UnaryOp::Plus,
+            Token::Sub => UnaryOp::Minus,
+            Token::BinaryNot => UnaryOp::Invert,
+            Token::BoolNot => UnaryOp::Not,
+            _ => return self.parse_pow_expr(),
+        };
+        self.advance();
+
+        let value = self.parse_unary_expr()?;
+        let span = first.span().to(value.span());
+        let node = AstNode::UnaryOp(op, Box::from(value));
+        wrap(node, span)
+    }
+
+    // pow_expr ::= atom , POW , pow_expr
+    //            | atom
     //            ;
     fn parse_pow_expr(&mut self) -> ParserResult {
-        let left = self.parse_unary_expr()?;
+        let left = self.parse_atom()?;
 
         let op = match self.current()?.value() {
             Token::Pow => BinaryOp::Pow,
@@ -271,31 +204,13 @@ impl<'src> Parser<'src> {
         self.advance();
 
         // Purposely recursive here, to force right-associativity.
+        // In maths, we always say x ** y ** z is (x ** (y ** z)). This differs to
+        // most of the expr grammar here, so we treat it as an edge case and do not
+        // wrap it in a utility handler helper.
         let right = self.parse_pow_expr()?;
         let span = left.span().to(right.span());
         let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
         Ok(Spanned::new(node, span))
-    }
-
-    // unary_expr ::= ADD , unary_expr
-    //              | SUB , unary_expr
-    //              | BINARY_NOT , unary_expr
-    //              | atom
-    //              ;
-    fn parse_unary_expr(&mut self) -> ParserResult {
-        let first = self.current()?;
-        let op = match first.value() {
-            Token::Add => UnaryOp::Plus,
-            Token::Sub => UnaryOp::Minus,
-            Token::BinaryNot => UnaryOp::Invert,
-            _ => return self.parse_atom(),
-        };
-        self.advance();
-
-        let value = self.parse_unary_expr()?;
-        let span = first.span().to(value.span());
-        let node = AstNode::UnaryOp(op, Box::from(value));
-        wrap(node, span)
     }
 
     // atom ::= IDENTIFIER
@@ -341,6 +256,32 @@ impl<'src> Parser<'src> {
 
         self.advance();
         atom
+    }
+
+    fn parse_binary_op_left_assoc<OpFn, ParserFn>(
+        &mut self,
+        op_fn: OpFn,
+        parser_fn: ParserFn,
+    ) -> ParserResult
+    where
+        OpFn: Fn(Token) -> Option<BinaryOp>,
+        ParserFn: Fn(&mut Self) -> ParserResult,
+    {
+        let mut left = parser_fn(self)?;
+
+        loop {
+            if let Some(op) = op_fn(self.current()?.value()) {
+                self.advance();
+                let right = parser_fn(self)?;
+                let span = left.span().to(right.span());
+                let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
+                left = Spanned::new(node, span);
+            } else {
+                break;
+            };
+        }
+
+        Ok(left)
     }
 
     #[inline]
