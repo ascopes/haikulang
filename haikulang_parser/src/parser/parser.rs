@@ -20,7 +20,53 @@ impl<'src> Parser<'src> {
     //  help avoid stack overflows on heavily nested expressions.
     #[allow(dead_code)]
     pub fn parse_expr(&mut self) -> ParserResult {
-        self.parse_bool_or_expr()
+        self.parse_assignment_expr()
+    }
+
+    // assignment_expr ::= bool_or_expr , ASSIGN , assignment_expr
+    //                   | bool_or_expr , ADD_ASSIGN , assignment_expr
+    //                   | bool_or_expr , SUB_ASSIGN , assignment_expr
+    //                   | bool_or_expr , MUL_ASSIGN , assignment_expr
+    //                   | bool_or_expr , DIV_ASSIGN , assignment_expr
+    //                   | bool_or_expr , MOD_ASSIGN , assignment_expr
+    //                   | bool_or_expr , POW_ASSIGN , assignment_expr
+    //                   | bool_or_expr , BINARY_AND_ASSIGN , assignment_expr
+    //                   | bool_or_expr , BINARY_OR_ASSIGN , assignment_expr
+    //                   | bool_or_expr , BINARY_XOR_ASSIGN , assignment_expr
+    //                   | bool_or_expr , BINARY_SHL_ASSIGN , assignment_expr
+    //                   | bool_or_expr , BINARY_SHR_ASSIGN , assignment_expr
+    //                   | bool_or_expr
+    //                   ;
+    fn parse_assignment_expr(&mut self) -> ParserResult {
+        let left = self.parse_bool_or_expr()?;
+
+        let op = match self.current()?.value() {
+            Token::Assign => None,
+            Token::AddAssign => Some(BinaryOp::Add),
+            Token::SubAssign => Some(BinaryOp::Sub),
+            Token::MulAssign => Some(BinaryOp::Mul),
+            Token::DivAssign => Some(BinaryOp::Div),
+            Token::ModAssign => Some(BinaryOp::Mod),
+            Token::PowAssign => Some(BinaryOp::Pow),
+            Token::BinaryAndAssign => Some(BinaryOp::BinaryAnd),
+            Token::BinaryOrAssign => Some(BinaryOp::BinaryOr),
+            Token::BinaryXorAssign => Some(BinaryOp::BinaryXor),
+            Token::BinaryShlAssign => Some(BinaryOp::BinaryShl),
+            Token::BinaryShrAssign => Some(BinaryOp::BinaryShr),
+            _ => return Ok(left),
+        };
+        self.advance();
+
+        // Purposely recursive here, to force right-associativity.
+        // `x = y = z = a` is parsed as `(x = (y = (z = a)))`
+        let right = self.parse_assignment_expr()?;
+        let span = left.span().to(right.span());
+        let node = AstNode::Assignment {
+            lvalue: Box::from(left),
+            op,
+            rvalue: Box::from(right),
+        };
+        Ok(Spanned::new(node, span))
     }
 
     // bool_or_expr ::= bool_and_expr , BINARY_OR , bool_or_expr
@@ -187,7 +233,10 @@ impl<'src> Parser<'src> {
 
         let value = self.parse_unary_expr()?;
         let span = first.span().to(value.span());
-        let node = AstNode::UnaryOp(op, Box::from(value));
+        let node = AstNode::UnaryOp {
+            op,
+            value: Box::from(value),
+        };
         wrap(node, span)
     }
 
@@ -204,12 +253,16 @@ impl<'src> Parser<'src> {
         self.advance();
 
         // Purposely recursive here, to force right-associativity.
-        // In maths, we always say x ** y ** z is (x ** (y ** z)). This differs to
+        // In maths, we always say `x ** y ** z` is `(x ** (y ** z))`. This differs to
         // most of the expr grammar here, so we treat it as an edge case and do not
         // wrap it in a utility handler helper.
         let right = self.parse_pow_expr()?;
         let span = left.span().to(right.span());
-        let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
+        let node = AstNode::BinaryOp {
+            left: Box::from(left),
+            op,
+            right: Box::from(right),
+        };
         Ok(Spanned::new(node, span))
     }
 
@@ -274,7 +327,11 @@ impl<'src> Parser<'src> {
                 self.advance();
                 let right = parser_fn(self)?;
                 let span = left.span().to(right.span());
-                let node = AstNode::BinaryOp(Box::from(left), op, Box::from(right));
+                let node = AstNode::BinaryOp {
+                    left: Box::from(left),
+                    op,
+                    right: Box::from(right),
+                };
                 left = Spanned::new(node, span);
             } else {
                 break;

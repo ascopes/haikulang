@@ -3,8 +3,24 @@ use crate::span::Spanned;
 
 #[derive(Clone, Debug)]
 pub enum AstNode {
-    BinaryOp(InnerAstNode, BinaryOp, InnerAstNode),
-    UnaryOp(UnaryOp, InnerAstNode),
+    // E.g. 1 + 2
+    BinaryOp {
+        left: InnerAstNode,
+        op: BinaryOp,
+        right: InnerAstNode,
+    },
+    // E.g. -4, not false, etc
+    UnaryOp {
+        op: UnaryOp,
+        value: InnerAstNode,
+    },
+    // E.g. x = {{expr}} or x += {{expr}}
+    Assignment {
+        lvalue: InnerAstNode,
+        op: Option<BinaryOp>,
+        rvalue: InnerAstNode,
+    },
+
     Float(FloatLit),
     Int(IntLit),
     Bool(bool),
