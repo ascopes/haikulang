@@ -57,6 +57,11 @@ impl<'src> Parser<'src> {
         };
         self.advance();
 
+        // Verify lvalue is assignable
+        if !matches!(left.value(), AstNode::Var(_)) {
+            return syntax_error(left.span(), "only identifiers can be used as lvalues in assignments");
+        }
+
         // Purposely recursive here, to force right-associativity.
         // `x = y = z = a` is parsed as `(x = (y = (z = a)))`
         let right = self.parse_assignment_expr()?;
@@ -288,7 +293,7 @@ impl<'src> Parser<'src> {
                     self.advance();
                     Ok(expr)
                 }
-                _ => syntax_error(last, "expected right parenthesis"),
+                _ => syntax_error(first.span(), "expected right parenthesis"),
             };
         }
 
@@ -301,7 +306,7 @@ impl<'src> Parser<'src> {
             Token::Identifier(value) => wrap(AstNode::Var(value), first.span()),
             _ => {
                 return syntax_error(
-                    first,
+                    first.span(),
                     "expected atom (literal, identifier, or expression within parenthesis)",
                 );
             }
@@ -360,7 +365,7 @@ fn wrap(node: AstNode, span: Span) -> ParserResult {
     Ok(Spanned::new(node, span))
 }
 
-fn syntax_error(token: Spanned<Token>, message: impl ToString) -> ParserResult {
-    let err = ParserError::SyntaxError(token.value(), message.to_string());
-    Err(Spanned::new(err, token.span()))
+fn syntax_error(span: Span, message: impl ToString) -> ParserResult {
+    let err = ParserError::SyntaxError(message.to_string());
+    Err(Spanned::new(err, span))
 }

@@ -1,7 +1,8 @@
-use crate::lexer::{LexerError, Token};
+use crate::lexer::LexerError;
 
 #[derive(Clone, Debug)]
 pub enum ParserError {
-    SyntaxError(Token, String),
+    UnknownSequence(String),
+    SyntaxError(String),
     LexerError(LexerError),
 }

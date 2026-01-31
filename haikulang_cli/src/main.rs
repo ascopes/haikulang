@@ -75,7 +75,7 @@ fn visit_assignment(
             variables.insert(identifier, final_rvalue);
             Ok(final_rvalue)
         }
-        other => fail!("Cannot use {:?} as lvalue in assignment", other),
+        _ => unreachable!(),
     }
 }
 
