@@ -23,7 +23,7 @@ pub enum Token {
     /*
      * Literals
      */
-    #[regex(r"[A-Za-z_][A-Za-z_0-9]*", callback = parse_identifier)]
+    #[regex(r"[A-Za-z][A-Za-z_0-9]*", callback = parse_identifier)]
     Identifier(String),
 
     // STRING_LIT  ::= '"' , STRING_CHAR* , '"' ;
