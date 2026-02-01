@@ -1,8 +1,8 @@
 use crate::lexer::token::Token;
 use crate::lexer::token_stream::TokenStream;
 use crate::parser::ast::*;
-use crate::parser::error::ParserError;
-use crate::span::{Span, Spanned};
+use crate::parser::error::{ParserError, syntax_error};
+use crate::span::Spanned;
 
 pub type ParserResult = Result<Spanned<AstNode>, Spanned<ParserError>>;
 
@@ -58,14 +58,7 @@ impl<'src> Parser<'src> {
         };
         self.advance();
 
-        // Verify lvalue is assignable
-        if !matches!(left.value(), AstNode::Var(_)) {
-            return syntax_error(
-                left.span(),
-                "only identifiers can be used as lvalues in assignments",
-            );
-        }
-
+        // Verify lvalue is assignable.
         // Purposely recursive here, to force right-associativity.
         // `x = y = z = a` is parsed as `(x = (y = (z = a)))`
         let right = self.parse_assignment_expr()?;
@@ -239,11 +232,11 @@ impl<'src> Parser<'src> {
         Ok(UnaryExpr::new(span, op, value))
     }
 
-    // pow_expr ::= atom , POW , pow_expr
-    //            | atom
+    // pow_expr ::= primary_expr , POW , pow_expr
+    //            | primary_expr
     //            ;
     fn parse_pow_expr(&mut self) -> ParserResult {
-        let left = self.parse_atom()?;
+        let left = self.parse_primary_expr()?;
 
         let op = match self.current()?.value() {
             Token::Pow => BinaryOp::Pow,
@@ -257,6 +250,69 @@ impl<'src> Parser<'src> {
         // wrap it in a utility handler helper.
         let right = self.parse_pow_expr()?;
         Ok(BinaryExpr::new(left, op, right))
+    }
+
+    // primary_expr  ::= atom , ( selector | function_call )* ;
+    fn parse_primary_expr(&mut self) -> ParserResult {
+        let mut expr = self.parse_atom()?;
+
+        // Consume chained calls and selectors
+        loop {
+            match self.current()?.value() {
+                Token::Period => expr = self.parse_selector(expr)?,
+                Token::LeftParen => expr = self.parse_function_call(expr)?,
+                _ => break,
+            }
+        }
+
+        Ok(expr)
+    }
+
+    // selector      ::= PERIOD , IDENTIFIER ;
+    fn parse_selector(&mut self, owner: Spanned<AstNode>) -> ParserResult {
+        self.advance();
+        let identifier = self.current()?;
+
+        match identifier.value() {
+            Token::Identifier(name) => {
+                let identifier = Spanned::new(name.to_string(), identifier.span());
+                let expr = MemberAccessExpr::new(owner, identifier);
+                self.advance();
+                Ok(expr)
+            }
+            _ => syntax_error(identifier.span(), "expected identifier"),
+        }
+    }
+
+    // function_call ::= LEFT_PAREN , arg_list , RIGHT_PAREN ;
+    // arg_list      ::= expr , ( COMMA , expr )* ;
+    fn parse_function_call(&mut self, name: Spanned<AstNode>) -> ParserResult {
+        self.advance();
+        let mut args = Vec::<Spanned<AstNode>>::new();
+
+        // Allow zero or more arguments, which are expressions.
+        while !matches!(self.current()?.value(), Token::RightParen) {
+            args.push(self.parse_expr()?);
+
+            if !matches!(self.current()?.value(), Token::Comma) {
+                break;
+            } else {
+                self.advance();
+            }
+        }
+
+        let right_paren = self.current()?;
+        if !matches!(right_paren.value(), Token::RightParen) {
+            return syntax_error(right_paren.span(), "expected right parenthesis");
+        };
+
+        self.advance();
+
+        Ok(FunctionCallExpr::new(
+            name,
+            Box::from(args),
+            right_paren.span(),
+        ))
     }
 
     // atom ::= IDENTIFIER
@@ -281,7 +337,7 @@ impl<'src> Parser<'src> {
                     self.advance();
                     Ok(expr)
                 }
-                _ => syntax_error(first.span(), "expected right parenthesis"),
+                _ => syntax_error(last.span(), "expected right parenthesis"),
             };
         }
 
@@ -291,7 +347,7 @@ impl<'src> Parser<'src> {
             Token::IntLit(value) => Spanned::new(AstNode::Int(value.clone()), first.span()),
             Token::FloatLit(value) => Spanned::new(AstNode::Float(value.clone()), first.span()),
             Token::StringLit(value) => Spanned::new(AstNode::String(value), first.span()),
-            Token::Identifier(value) => Spanned::new(AstNode::Var(value), first.span()),
+            Token::Identifier(value) => Spanned::new(AstNode::Identifier(value), first.span()),
             _ => {
                 return syntax_error(
                     first.span(),
@@ -303,6 +359,10 @@ impl<'src> Parser<'src> {
         self.advance();
         Ok(atom)
     }
+
+    /*
+     * Helpers.
+     */
 
     fn parse_binary_op_left_assoc<OpFn, ParserFn>(
         &mut self,
@@ -341,9 +401,4 @@ impl<'src> Parser<'src> {
     fn advance(&mut self) {
         self.stream.advance();
     }
-}
-
-fn syntax_error(span: Span, message: impl ToString) -> ParserResult {
-    let err = ParserError::SyntaxError(message.to_string());
-    Err(Spanned::new(err, span))
 }

@@ -7,11 +7,13 @@ pub enum AstNode {
     BinaryExpr(Box<BinaryExpr>),
     UnaryExpr(Box<UnaryExpr>),
     AssignmentExpr(Box<AssignmentExpr>),
+    MemberAccessExpr(Box<MemberAccessExpr>),
+    FunctionCallExpr(Box<FunctionCallExpr>),
     Float(FloatLit),
     Int(IntLit),
     Bool(bool),
     String(StrLit),
-    Var(StrLit),
+    Identifier(StrLit),
 }
 
 #[derive(Clone, Debug)]
@@ -92,6 +94,41 @@ impl AssignmentExpr {
         let span = lvalue.span().to(rvalue.span());
         let node = Box::new(Self { lvalue, op, rvalue });
         Spanned::new(AstNode::AssignmentExpr(node), span)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MemberAccessExpr {
+    pub owner: Spanned<AstNode>,
+    pub member: Spanned<String>,
+}
+
+impl MemberAccessExpr {
+    pub fn new(owner: Spanned<AstNode>, member: Spanned<String>) -> Spanned<AstNode> {
+        let span = owner.span().to(member.span());
+        let node = Box::new(Self { owner, member });
+        Spanned::new(AstNode::MemberAccessExpr(node), span)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FunctionCallExpr {
+    pub name: Spanned<AstNode>,
+    pub arguments: Box<[Spanned<AstNode>]>,
+}
+
+impl FunctionCallExpr {
+    pub fn new(
+        owner: Spanned<AstNode>,
+        arguments: Box<[Spanned<AstNode>]>,
+        end: Span,
+    ) -> Spanned<AstNode> {
+        let span = owner.span().to(end);
+        let node = Box::new(Self {
+            name: owner,
+            arguments,
+        });
+        Spanned::new(AstNode::FunctionCallExpr(node), span)
     }
 }
 
@@ -206,6 +243,78 @@ mod tests {
                 assert_eq!(boxed_expr.rvalue.span(), Span::new(12, 15));
             }
             other => panic!("Expected AssignmentExpr, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn member_access_expr_constructs_correctly() {
+        // Given
+        let owner = Spanned::new(AstNode::Identifier(Box::from("foo")), Span::new(3, 6));
+        let member = Spanned::new("bar".to_string(), Span::new(7, 10));
+
+        // When
+        let expr = MemberAccessExpr::new(owner, member);
+
+        // Then
+        assert_eq!(expr.span(), Span::new(3, 10));
+        match expr.value() {
+            AstNode::MemberAccessExpr(boxed_expr) => {
+                match boxed_expr.owner.value() {
+                    AstNode::Identifier(str) => assert_eq!(str.as_ref(), "foo"),
+                    other => panic!("Expected Identifier for member, got {:?}", other),
+                }
+                assert_eq!(boxed_expr.owner.span(), Span::new(3, 6));
+
+                assert_eq!(boxed_expr.member.value(), "bar".to_string());
+                assert_eq!(boxed_expr.member.span(), Span::new(7, 10));
+            }
+            other => panic!("Expected MemberAccessExpr, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn function_call_expr_constructs_correctly() {
+        // Given
+        let name = Spanned::new(AstNode::Identifier(Box::from("foo")), Span::new(3, 6));
+        let args: [Spanned<AstNode>; 3] = [
+            Spanned::new(AstNode::Int(64), Span::new(5, 7)),
+            Spanned::new(AstNode::Float(69.1), Span::new(10, 13)),
+            BinaryExpr::new(
+                Spanned::new(AstNode::Int(12), Span::new(15, 20)),
+                BinaryOp::Div,
+                Spanned::new(AstNode::Float(23.1), Span::new(20, 25)),
+            ),
+        ];
+        let close_paren_span = Span::new(27, 28);
+
+        // When
+        let expr = FunctionCallExpr::new(name, Box::from(args), close_paren_span);
+
+        // Then
+        assert_eq!(expr.span(), Span::new(3, 28));
+        match expr.value() {
+            AstNode::FunctionCallExpr(boxed_expr) => {
+                assert_eq!(boxed_expr.name.span(), Span::new(3, 6));
+                match boxed_expr.name.value() {
+                    AstNode::Identifier(name) => assert_eq!(name.as_ref(), "foo"),
+                    other => panic!("Expected Identifier for name, got {:?}", other),
+                }
+
+                assert_eq!(boxed_expr.arguments.len(), 3);
+
+                let first_arg = boxed_expr.arguments.get(0).unwrap();
+                assert_eq!(first_arg.span(), Span::new(5, 7));
+                assert!(matches!(first_arg.value(), AstNode::Int(64)));
+
+                let second_arg = boxed_expr.arguments.get(1).unwrap();
+                assert_eq!(second_arg.span(), Span::new(10, 13));
+                assert!(matches!(second_arg.value(), AstNode::Float(69.1)));
+
+                let third_arg = boxed_expr.arguments.get(2).unwrap();
+                assert_eq!(third_arg.span(), Span::new(15, 25));
+                assert!(matches!(third_arg.value(), AstNode::BinaryExpr(_)));
+            }
+            other => panic!("Expected FunctionCallExpr, got {:?}", other),
         }
     }
 }

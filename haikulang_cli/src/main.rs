@@ -51,7 +51,7 @@ fn visit(variables: &mut HashMap<String, f64>, ast: AstNode) -> Result<f64, Stri
         }
         AstNode::Float(value) => Ok(value),
         AstNode::Int(value) => Ok(value as f64),
-        AstNode::Var(identifier) => match variables.get(&identifier.to_string()) {
+        AstNode::Identifier(identifier) => match variables.get(&identifier.to_string()) {
             Some(value) => Ok(*value),
             None => fail!("Unknown variable referenced: {:?}", identifier),
         },
@@ -66,7 +66,7 @@ fn visit_assignment(
     rvalue: AstNode,
 ) -> Result<f64, String> {
     match lvalue {
-        AstNode::Var(identifier) => {
+        AstNode::Identifier(identifier) => {
             let final_rvalue = if let Some(bin_op) = op {
                 visit_binary_op(variables, rvalue.clone(), bin_op, rvalue)?
             } else {
@@ -76,7 +76,7 @@ fn visit_assignment(
             variables.insert(identifier.to_string(), final_rvalue);
             Ok(final_rvalue)
         }
-        _ => unreachable!(),
+        other => fail!("Unsupported AST node {:?}", other),
     }
 }
 
