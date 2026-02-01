@@ -1,4 +1,4 @@
-use crate::lexer::LexerError;
+use crate::lexer::error::LexerError;
 
 #[derive(Clone, Debug)]
 pub enum ParserError {

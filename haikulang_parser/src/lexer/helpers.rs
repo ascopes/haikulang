@@ -1,24 +1,24 @@
 use crate::lexer::error::LexerError;
-use crate::lexer::token::{FloatLit, IntLit, StringLit, Token};
+use crate::lexer::token::{FloatLit, IntLit, StrLit, Token};
 use std::str::FromStr;
 
-pub fn parse_inline_comment(lex: &mut logos::Lexer<Token>) -> String {
+pub fn parse_inline_comment(lex: &mut logos::Lexer<Token>) -> StrLit {
     let text = lex.slice();
     // Remove the leading "//"
-    text[2..text.len()].to_string()
+    text[2..].to_string().into_boxed_str()
 }
 
-pub fn parse_multiline_comment(lex: &mut logos::Lexer<Token>) -> String {
+pub fn parse_multiline_comment(lex: &mut logos::Lexer<Token>) -> StrLit {
     let text = lex.slice();
     // Remove the leading "/*" and trailing "*/"
-    text[2..text.len() - 2].to_string()
+    text[2..text.len() - 2].to_string().into_boxed_str()
 }
 
-pub fn parse_identifier(lex: &mut logos::Lexer<Token>) -> String {
-    lex.slice().to_string()
+pub fn parse_identifier(lex: &mut logos::Lexer<Token>) -> StrLit {
+    Box::from(lex.slice())
 }
 
-pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StringLit, LexerError> {
+pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StrLit, LexerError> {
     let unparsed = lex.slice();
     let mut parsed = String::new();
 
@@ -40,7 +40,7 @@ pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StringLit, LexerErr
         }
     }
 
-    Ok(parsed)
+    Ok(parsed.into_boxed_str())
 }
 
 fn parse_string_escape_char(text: &str, offset: usize) -> Result<(&str, usize), LexerError> {

@@ -1,5 +1,6 @@
-use haikulang_parser::lexer::*;
-use haikulang_parser::parser::*;
+use haikulang_parser::lexer::token_stream::TokenStream;
+use haikulang_parser::parser::ast::*;
+use haikulang_parser::parser::parser::Parser;
 use rustyline::{DefaultEditor, error::ReadlineError};
 use std::collections::HashMap;
 
@@ -41,16 +42,16 @@ macro_rules! fail {
 
 fn visit(variables: &mut HashMap<String, f64>, ast: AstNode) -> Result<f64, String> {
     match ast {
-        AstNode::BinaryOp { left, op, right } => {
-            visit_binary_op(variables, left.value(), op, right.value())
+        AstNode::BinaryExpr(expr) => {
+            visit_binary_op(variables, expr.left.value(), expr.op, expr.right.value())
         }
-        AstNode::UnaryOp { op, value } => visit_unary_op(variables, op, value.value()),
-        AstNode::Assignment { lvalue, op, rvalue } => {
-            visit_assignment(variables, lvalue.value(), op, rvalue.value())
+        AstNode::UnaryExpr(expr) => visit_unary_op(variables, expr.op, expr.value.value()),
+        AstNode::AssignmentExpr(expr) => {
+            visit_assignment(variables, expr.lvalue.value(), expr.op, expr.rvalue.value())
         }
         AstNode::Float(value) => Ok(value),
         AstNode::Int(value) => Ok(value as f64),
-        AstNode::Var(identifier) => match variables.get(&identifier) {
+        AstNode::Var(identifier) => match variables.get(&identifier.to_string()) {
             Some(value) => Ok(*value),
             None => fail!("Unknown variable referenced: {:?}", identifier),
         },
@@ -72,7 +73,7 @@ fn visit_assignment(
                 visit(variables, rvalue)?
             };
 
-            variables.insert(identifier, final_rvalue);
+            variables.insert(identifier.to_string(), final_rvalue);
             Ok(final_rvalue)
         }
         _ => unreachable!(),

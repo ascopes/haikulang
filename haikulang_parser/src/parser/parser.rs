@@ -1,6 +1,7 @@
-use crate::lexer::{Token, TokenStream};
+use crate::lexer::token::Token;
+use crate::lexer::token_stream::TokenStream;
+use crate::parser::ast::*;
 use crate::parser::error::ParserError;
-use crate::parser::{AstNode, BinaryOp, UnaryOp};
 use crate::span::{Span, Spanned};
 
 pub type ParserResult = Result<Spanned<AstNode>, Spanned<ParserError>>;
@@ -59,19 +60,16 @@ impl<'src> Parser<'src> {
 
         // Verify lvalue is assignable
         if !matches!(left.value(), AstNode::Var(_)) {
-            return syntax_error(left.span(), "only identifiers can be used as lvalues in assignments");
+            return syntax_error(
+                left.span(),
+                "only identifiers can be used as lvalues in assignments",
+            );
         }
 
         // Purposely recursive here, to force right-associativity.
         // `x = y = z = a` is parsed as `(x = (y = (z = a)))`
         let right = self.parse_assignment_expr()?;
-        let span = left.span().to(right.span());
-        let node = AstNode::Assignment {
-            lvalue: Box::from(left),
-            op,
-            rvalue: Box::from(right),
-        };
-        Ok(Spanned::new(node, span))
+        Ok(AssignmentExpr::new(left, op, right))
     }
 
     // bool_or_expr ::= bool_and_expr , BINARY_OR , bool_or_expr
@@ -238,11 +236,7 @@ impl<'src> Parser<'src> {
 
         let value = self.parse_unary_expr()?;
         let span = first.span().to(value.span());
-        let node = AstNode::UnaryOp {
-            op,
-            value: Box::from(value),
-        };
-        wrap(node, span)
+        Ok(UnaryExpr::new(span, op, value))
     }
 
     // pow_expr ::= atom , POW , pow_expr
@@ -262,13 +256,7 @@ impl<'src> Parser<'src> {
         // most of the expr grammar here, so we treat it as an edge case and do not
         // wrap it in a utility handler helper.
         let right = self.parse_pow_expr()?;
-        let span = left.span().to(right.span());
-        let node = AstNode::BinaryOp {
-            left: Box::from(left),
-            op,
-            right: Box::from(right),
-        };
-        Ok(Spanned::new(node, span))
+        Ok(BinaryExpr::new(left, op, right))
     }
 
     // atom ::= IDENTIFIER
@@ -298,12 +286,12 @@ impl<'src> Parser<'src> {
         }
 
         let atom = match first.value() {
-            Token::True => wrap(AstNode::Bool(true), first.span()),
-            Token::False => wrap(AstNode::Bool(false), first.span()),
-            Token::IntLit(value) => wrap(AstNode::Int(value.clone()), first.span()),
-            Token::FloatLit(value) => wrap(AstNode::Float(value.clone()), first.span()),
-            Token::StringLit(value) => wrap(AstNode::String(value.clone()), first.span()),
-            Token::Identifier(value) => wrap(AstNode::Var(value), first.span()),
+            Token::True => Spanned::new(AstNode::Bool(true), first.span()),
+            Token::False => Spanned::new(AstNode::Bool(false), first.span()),
+            Token::IntLit(value) => Spanned::new(AstNode::Int(value.clone()), first.span()),
+            Token::FloatLit(value) => Spanned::new(AstNode::Float(value.clone()), first.span()),
+            Token::StringLit(value) => Spanned::new(AstNode::String(value), first.span()),
+            Token::Identifier(value) => Spanned::new(AstNode::Var(value), first.span()),
             _ => {
                 return syntax_error(
                     first.span(),
@@ -313,7 +301,7 @@ impl<'src> Parser<'src> {
         };
 
         self.advance();
-        atom
+        Ok(atom)
     }
 
     fn parse_binary_op_left_assoc<OpFn, ParserFn>(
@@ -331,13 +319,8 @@ impl<'src> Parser<'src> {
             if let Some(op) = op_fn(self.current()?.value()) {
                 self.advance();
                 let right = parser_fn(self)?;
-                let span = left.span().to(right.span());
-                let node = AstNode::BinaryOp {
-                    left: Box::from(left),
-                    op,
-                    right: Box::from(right),
-                };
-                left = Spanned::new(node, span);
+
+                left = BinaryExpr::new(left, op, right);
             } else {
                 break;
             };
@@ -358,11 +341,6 @@ impl<'src> Parser<'src> {
     fn advance(&mut self) {
         self.stream.advance();
     }
-}
-
-#[inline]
-fn wrap(node: AstNode, span: Span) -> ParserResult {
-    Ok(Spanned::new(node, span))
 }
 
 fn syntax_error(span: Span, message: impl ToString) -> ParserResult {

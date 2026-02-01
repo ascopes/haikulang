@@ -2,9 +2,9 @@ use super::error::LexerError;
 use super::helpers::*;
 use logos::Logos;
 
-pub type StringLit = String;
 pub type IntLit = u64;
 pub type FloatLit = f64;
+pub type StrLit = Box<str>;
 
 #[derive(Clone, Debug, Logos, PartialEq)]
 #[logos(error = LexerError)]
@@ -15,16 +15,16 @@ pub enum Token {
      * Comments
      */
     #[regex(r"//[^\r\n]*?[\r\n]?", callback = parse_inline_comment)]
-    InlineComment(String),
+    InlineComment(StrLit),
 
     #[regex(r"/\*[^(\*/)]*?\*/", callback = parse_multiline_comment)]
-    MultilineComment(String),
+    MultilineComment(StrLit),
 
     /*
      * Literals
      */
     #[regex(r"[A-Za-z][A-Za-z_0-9]*", callback = parse_identifier)]
-    Identifier(String),
+    Identifier(StrLit),
 
     // STRING_LIT  ::= '"' , STRING_CHAR* , '"' ;
     // STRING_CHAR ::= '\\n'
@@ -46,7 +46,7 @@ pub enum Token {
             "                           # Closing quote
         "#, callback = parse_string
     )]
-    StringLit(StringLit),
+    StringLit(StrLit),
 
     //        INT_LIT ::= INT_BINARY_LIT
     //                  | INT_OCTAL_LIT
@@ -293,7 +293,10 @@ mod tests {
         let token = lexer.next().unwrap().unwrap();
 
         // Then
-        assert_eq!(Token::InlineComment(expected_content.to_string()), token);
+        match token {
+            Token::InlineComment(str) => assert_eq!(expected_content, str.as_ref()),
+            other => panic!("expected InlineComment, got {:?}", other),
+        }
     }
 
     #[test_case(                    "/**/",                "" ; "empty comment")]
@@ -309,7 +312,10 @@ mod tests {
         let token = lexer.next().unwrap().unwrap();
 
         // Then
-        assert_eq!(Token::MultilineComment(expected_content.to_string()), token);
+        match token {
+            Token::MultilineComment(str) => assert_eq!(expected_content, str.as_ref()),
+            other => panic!("expected MultilineComment, got {:?}", other),
+        }
     }
 
     #[test_case(    "true",              Token::True ; "true keyword")]

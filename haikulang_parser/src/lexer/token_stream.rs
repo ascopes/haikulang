@@ -1,4 +1,5 @@
-use crate::lexer::{LexerError, Token};
+use crate::lexer::error::LexerError;
+use crate::lexer::token::Token;
 use crate::span::{Span, Spanned};
 use logos::{Logos, SpannedIter};
 
