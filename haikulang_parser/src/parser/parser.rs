@@ -1,6 +1,7 @@
+use crate::ast::expr::*;
+use crate::ast::node::*;
 use crate::lexer::token::Token;
 use crate::lexer::token_stream::TokenStream;
-use crate::parser::ast::*;
 use crate::parser::error::{ParserError, syntax_error};
 use crate::span::Spanned;
 

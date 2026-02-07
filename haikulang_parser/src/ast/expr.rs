@@ -1,20 +1,5 @@
-use crate::lexer::token::{FloatLit, IntLit, StrLit};
+use crate::ast::node::AstNode;
 use crate::span::{Span, Spanned};
-
-// TODO(ascopes): use a string interner to reduce memory overhead later.
-#[derive(Clone, Debug)]
-pub enum AstNode {
-    BinaryExpr(Box<BinaryExpr>),
-    UnaryExpr(Box<UnaryExpr>),
-    AssignmentExpr(Box<AssignmentExpr>),
-    MemberAccessExpr(Box<MemberAccessExpr>),
-    FunctionCallExpr(Box<FunctionCallExpr>),
-    Float(FloatLit),
-    Int(IntLit),
-    Bool(bool),
-    String(StrLit),
-    Identifier(StrLit),
-}
 
 #[derive(Clone, Debug)]
 pub struct BinaryExpr {
@@ -135,7 +120,6 @@ impl FunctionCallExpr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::ast::AstNode;
     use crate::span::{Span, Spanned};
 
     #[test]
