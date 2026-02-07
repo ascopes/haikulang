@@ -1,5 +1,4 @@
 use haikulang_parser::ast::expr::*;
-use haikulang_parser::ast::node::*;
 use haikulang_parser::lexer::token_stream::TokenStream;
 use haikulang_parser::parser::parser::Parser;
 use rustyline::{DefaultEditor, error::ReadlineError};
@@ -41,18 +40,18 @@ macro_rules! fail {
     };
 }
 
-fn visit(variables: &mut HashMap<String, f64>, ast: AstNode) -> Result<f64, String> {
+fn visit(variables: &mut HashMap<String, f64>, ast: Expr) -> Result<f64, String> {
     match ast {
-        AstNode::BinaryExpr(expr) => {
+        Expr::Binary(expr) => {
             visit_binary_op(variables, expr.left.value(), expr.op, expr.right.value())
         }
-        AstNode::UnaryExpr(expr) => visit_unary_op(variables, expr.op, expr.value.value()),
-        AstNode::AssignmentExpr(expr) => {
+        Expr::Unary(expr) => visit_unary_op(variables, expr.op, expr.value.value()),
+        Expr::Assignment(expr) => {
             visit_assignment(variables, expr.lvalue.value(), expr.op, expr.rvalue.value())
         }
-        AstNode::Float(value) => Ok(value),
-        AstNode::Int(value) => Ok(value as f64),
-        AstNode::Identifier(identifier) => match variables.get(&identifier.to_string()) {
+        Expr::Float(value) => Ok(value),
+        Expr::Int(value) => Ok(value as f64),
+        Expr::Identifier(identifier) => match variables.get(&identifier.to_string()) {
             Some(value) => Ok(*value),
             None => fail!("Unknown variable referenced: {:?}", identifier),
         },
@@ -62,12 +61,12 @@ fn visit(variables: &mut HashMap<String, f64>, ast: AstNode) -> Result<f64, Stri
 
 fn visit_assignment(
     variables: &mut HashMap<String, f64>,
-    lvalue: AstNode,
+    lvalue: Expr,
     op: Option<BinaryOp>,
-    rvalue: AstNode,
+    rvalue: Expr,
 ) -> Result<f64, String> {
     match lvalue {
-        AstNode::Identifier(identifier) => {
+        Expr::Identifier(identifier) => {
             let final_rvalue = if let Some(bin_op) = op {
                 visit_binary_op(variables, rvalue.clone(), bin_op, rvalue)?
             } else {
@@ -83,9 +82,9 @@ fn visit_assignment(
 
 fn visit_binary_op(
     variables: &mut HashMap<String, f64>,
-    left: AstNode,
+    left: Expr,
     op: BinaryOp,
-    right: AstNode,
+    right: Expr,
 ) -> Result<f64, String> {
     match op {
         BinaryOp::Add => Ok(visit(variables, left)? + visit(variables, right)?),
@@ -116,7 +115,7 @@ fn visit_binary_op(
 fn visit_unary_op(
     variables: &mut HashMap<String, f64>,
     op: UnaryOp,
-    value: AstNode,
+    value: Expr,
 ) -> Result<f64, String> {
     match op {
         UnaryOp::Plus => visit(variables, value),

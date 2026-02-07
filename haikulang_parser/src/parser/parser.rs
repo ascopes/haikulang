@@ -1,11 +1,10 @@
 use crate::ast::expr::*;
-use crate::ast::node::*;
 use crate::lexer::token::Token;
 use crate::lexer::token_stream::TokenStream;
 use crate::parser::error::{ParserError, syntax_error};
 use crate::span::Spanned;
 
-pub type ParserResult = Result<Spanned<AstNode>, Spanned<ParserError>>;
+pub type ParserResult = Result<Spanned<Expr>, Spanned<ParserError>>;
 
 pub struct Parser<'src> {
     stream: TokenStream<'src>,
@@ -270,7 +269,7 @@ impl<'src> Parser<'src> {
     }
 
     // selector      ::= PERIOD , IDENTIFIER ;
-    fn parse_selector(&mut self, owner: Spanned<AstNode>) -> ParserResult {
+    fn parse_selector(&mut self, owner: Spanned<Expr>) -> ParserResult {
         self.advance();
         let identifier = self.current()?;
 
@@ -287,9 +286,9 @@ impl<'src> Parser<'src> {
 
     // function_call ::= LEFT_PAREN , arg_list , RIGHT_PAREN ;
     // arg_list      ::= expr , ( COMMA , expr )* ;
-    fn parse_function_call(&mut self, name: Spanned<AstNode>) -> ParserResult {
+    fn parse_function_call(&mut self, name: Spanned<Expr>) -> ParserResult {
         self.advance();
-        let mut args = Vec::<Spanned<AstNode>>::new();
+        let mut args = Vec::<Spanned<Expr>>::new();
 
         // Allow zero or more arguments, which are expressions.
         while !matches!(self.current()?.value(), Token::RightParen) {
@@ -343,12 +342,12 @@ impl<'src> Parser<'src> {
         }
 
         let atom = match first.value() {
-            Token::True => Spanned::new(AstNode::Bool(true), first.span()),
-            Token::False => Spanned::new(AstNode::Bool(false), first.span()),
-            Token::IntLit(value) => Spanned::new(AstNode::Int(value.clone()), first.span()),
-            Token::FloatLit(value) => Spanned::new(AstNode::Float(value.clone()), first.span()),
-            Token::StringLit(value) => Spanned::new(AstNode::String(value), first.span()),
-            Token::Identifier(value) => Spanned::new(AstNode::Identifier(value), first.span()),
+            Token::True => Spanned::new(Expr::Bool(true), first.span()),
+            Token::False => Spanned::new(Expr::Bool(false), first.span()),
+            Token::IntLit(value) => Spanned::new(Expr::Int(value.clone()), first.span()),
+            Token::FloatLit(value) => Spanned::new(Expr::Float(value.clone()), first.span()),
+            Token::StringLit(value) => Spanned::new(Expr::String(value), first.span()),
+            Token::Identifier(value) => Spanned::new(Expr::Identifier(value), first.span()),
             _ => {
                 return syntax_error(
                     first.span(),

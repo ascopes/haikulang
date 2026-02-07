@@ -1,18 +1,32 @@
-use crate::ast::node::AstNode;
+use crate::lexer::token::{FloatLit, IntLit, StrLit};
 use crate::span::{Span, Spanned};
 
 #[derive(Clone, Debug)]
+pub enum Expr {
+    Binary(Box<BinaryExpr>),
+    Unary(Box<UnaryExpr>),
+    Assignment(Box<AssignmentExpr>),
+    MemberAccess(Box<MemberAccessExpr>),
+    FunctionCall(Box<FunctionCallExpr>),
+    Float(FloatLit),
+    Int(IntLit),
+    Bool(bool),
+    String(StrLit),
+    Identifier(StrLit),
+}
+
+#[derive(Clone, Debug)]
 pub struct BinaryExpr {
-    pub left: Spanned<AstNode>,
+    pub left: Spanned<Expr>,
     pub op: BinaryOp,
-    pub right: Spanned<AstNode>,
+    pub right: Spanned<Expr>,
 }
 
 impl BinaryExpr {
-    pub fn new(left: Spanned<AstNode>, op: BinaryOp, right: Spanned<AstNode>) -> Spanned<AstNode> {
+    pub fn new(left: Spanned<Expr>, op: BinaryOp, right: Spanned<Expr>) -> Spanned<Expr> {
         let span = left.span().to(right.span());
         let node = Box::new(Self { left, op, right });
-        Spanned::new(AstNode::BinaryExpr(node), span)
+        Spanned::new(Expr::Binary(node), span)
     }
 }
 
@@ -44,14 +58,14 @@ pub enum BinaryOp {
 #[derive(Clone, Debug)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
-    pub value: Spanned<AstNode>,
+    pub value: Spanned<Expr>,
 }
 
 impl UnaryExpr {
-    pub fn new(start: Span, op: UnaryOp, value: Spanned<AstNode>) -> Spanned<AstNode> {
+    pub fn new(start: Span, op: UnaryOp, value: Spanned<Expr>) -> Spanned<Expr> {
         let span = start.to(value.span());
         let node = Box::new(Self { op, value });
-        Spanned::new(AstNode::UnaryExpr(node), span)
+        Spanned::new(Expr::Unary(node), span)
     }
 }
 
@@ -65,55 +79,51 @@ pub enum UnaryOp {
 
 #[derive(Clone, Debug)]
 pub struct AssignmentExpr {
-    pub lvalue: Spanned<AstNode>,
+    pub lvalue: Spanned<Expr>,
     pub op: Option<BinaryOp>,
-    pub rvalue: Spanned<AstNode>,
+    pub rvalue: Spanned<Expr>,
 }
 
 impl AssignmentExpr {
     pub fn new(
-        lvalue: Spanned<AstNode>,
+        lvalue: Spanned<Expr>,
         op: Option<BinaryOp>,
-        rvalue: Spanned<AstNode>,
-    ) -> Spanned<AstNode> {
+        rvalue: Spanned<Expr>,
+    ) -> Spanned<Expr> {
         let span = lvalue.span().to(rvalue.span());
         let node = Box::new(Self { lvalue, op, rvalue });
-        Spanned::new(AstNode::AssignmentExpr(node), span)
+        Spanned::new(Expr::Assignment(node), span)
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct MemberAccessExpr {
-    pub owner: Spanned<AstNode>,
+    pub owner: Spanned<Expr>,
     pub member: Spanned<String>,
 }
 
 impl MemberAccessExpr {
-    pub fn new(owner: Spanned<AstNode>, member: Spanned<String>) -> Spanned<AstNode> {
+    pub fn new(owner: Spanned<Expr>, member: Spanned<String>) -> Spanned<Expr> {
         let span = owner.span().to(member.span());
         let node = Box::new(Self { owner, member });
-        Spanned::new(AstNode::MemberAccessExpr(node), span)
+        Spanned::new(Expr::MemberAccess(node), span)
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct FunctionCallExpr {
-    pub name: Spanned<AstNode>,
-    pub arguments: Box<[Spanned<AstNode>]>,
+    pub name: Spanned<Expr>,
+    pub arguments: Box<[Spanned<Expr>]>,
 }
 
 impl FunctionCallExpr {
-    pub fn new(
-        owner: Spanned<AstNode>,
-        arguments: Box<[Spanned<AstNode>]>,
-        end: Span,
-    ) -> Spanned<AstNode> {
+    pub fn new(owner: Spanned<Expr>, arguments: Box<[Spanned<Expr>]>, end: Span) -> Spanned<Expr> {
         let span = owner.span().to(end);
         let node = Box::new(Self {
             name: owner,
             arguments,
         });
-        Spanned::new(AstNode::FunctionCallExpr(node), span)
+        Spanned::new(Expr::FunctionCall(node), span)
     }
 }
 
@@ -123,13 +133,13 @@ mod tests {
     use crate::span::{Span, Spanned};
 
     #[test]
-    fn ast_node_size_is_not_too_large() {
+    fn expr_enum_size_is_not_too_large() {
         let desired_max_size = 24;
-        let size = size_of::<AstNode>();
+        let size = size_of::<Expr>();
 
         assert!(
             size <= desired_max_size,
-            "AstNode size is too large (wanted <= {} bytes, was {} bytes), consider boxing elements to reduce the size.",
+            "Expr enum size is too large (wanted <= {} bytes, was {} bytes), consider boxing elements to reduce the size.",
             desired_max_size,
             size
         )
@@ -138,9 +148,9 @@ mod tests {
     #[test]
     fn binary_expr_constructs_correctly() {
         // Given
-        let left = Spanned::new(AstNode::Int(123), Span::new(5, 8));
+        let left = Spanned::new(Expr::Int(123), Span::new(5, 8));
         let op = BinaryOp::Mul;
-        let right = Spanned::new(AstNode::Int(456), Span::new(12, 15));
+        let right = Spanned::new(Expr::Int(456), Span::new(12, 15));
 
         // When
         let expr = BinaryExpr::new(left, op, right);
@@ -148,9 +158,9 @@ mod tests {
         // Then
         assert_eq!(expr.span(), Span::new(5, 15));
         match expr.value() {
-            AstNode::BinaryExpr(boxed_expr) => {
+            Expr::Binary(boxed_expr) => {
                 assert!(
-                    matches!(boxed_expr.left.value(), AstNode::Int(123)),
+                    matches!(boxed_expr.left.value(), Expr::Int(123)),
                     "expected Int(123), got {:?}",
                     boxed_expr.left.value()
                 );
@@ -159,7 +169,7 @@ mod tests {
                 assert_eq!(boxed_expr.op, BinaryOp::Mul);
 
                 assert!(
-                    matches!(boxed_expr.right.value(), AstNode::Int(456)),
+                    matches!(boxed_expr.right.value(), Expr::Int(456)),
                     "expected Int(456), got {:?}",
                     boxed_expr.right.value()
                 );
@@ -174,7 +184,7 @@ mod tests {
         // Given
         let op_span = Span::new(11, 12);
         let op = UnaryOp::Invert;
-        let value = Spanned::new(AstNode::Int(456), Span::new(12, 15));
+        let value = Spanned::new(Expr::Int(456), Span::new(12, 15));
 
         // When
         let expr = UnaryExpr::new(op_span, op, value);
@@ -182,11 +192,11 @@ mod tests {
         // Then
         assert_eq!(expr.span(), Span::new(11, 15));
         match expr.value() {
-            AstNode::UnaryExpr(boxed_expr) => {
+            Expr::Unary(boxed_expr) => {
                 assert_eq!(boxed_expr.op, UnaryOp::Invert);
 
                 assert!(
-                    matches!(boxed_expr.value.value(), AstNode::Int(456)),
+                    matches!(boxed_expr.value.value(), Expr::Int(456)),
                     "expected Int(456), got {:?}",
                     boxed_expr.value.value()
                 );
@@ -199,9 +209,9 @@ mod tests {
     #[test]
     fn assignment_expr_constructs_correctly() {
         // Given
-        let left = Spanned::new(AstNode::Int(123), Span::new(5, 8));
+        let left = Spanned::new(Expr::Int(123), Span::new(5, 8));
         let op = BinaryOp::Mul;
-        let right = Spanned::new(AstNode::Int(456), Span::new(12, 15));
+        let right = Spanned::new(Expr::Int(456), Span::new(12, 15));
 
         // When
         let expr = AssignmentExpr::new(left, Some(op), right);
@@ -209,9 +219,9 @@ mod tests {
         // Then
         assert_eq!(expr.span(), Span::new(5, 15));
         match expr.value() {
-            AstNode::AssignmentExpr(boxed_expr) => {
+            Expr::Assignment(boxed_expr) => {
                 assert!(
-                    matches!(boxed_expr.lvalue.value(), AstNode::Int(123)),
+                    matches!(boxed_expr.lvalue.value(), Expr::Int(123)),
                     "expected Int(123), got {:?}",
                     boxed_expr.lvalue.value()
                 );
@@ -220,7 +230,7 @@ mod tests {
                 assert!(matches!(boxed_expr.op, Some(BinaryOp::Mul)));
 
                 assert!(
-                    matches!(boxed_expr.rvalue.value(), AstNode::Int(456)),
+                    matches!(boxed_expr.rvalue.value(), Expr::Int(456)),
                     "expected Int(456), got {:?}",
                     boxed_expr.rvalue.value()
                 );
@@ -233,7 +243,7 @@ mod tests {
     #[test]
     fn member_access_expr_constructs_correctly() {
         // Given
-        let owner = Spanned::new(AstNode::Identifier(Box::from("foo")), Span::new(3, 6));
+        let owner = Spanned::new(Expr::Identifier(Box::from("foo")), Span::new(3, 6));
         let member = Spanned::new("bar".to_string(), Span::new(7, 10));
 
         // When
@@ -242,9 +252,9 @@ mod tests {
         // Then
         assert_eq!(expr.span(), Span::new(3, 10));
         match expr.value() {
-            AstNode::MemberAccessExpr(boxed_expr) => {
+            Expr::MemberAccess(boxed_expr) => {
                 match boxed_expr.owner.value() {
-                    AstNode::Identifier(str) => assert_eq!(str.as_ref(), "foo"),
+                    Expr::Identifier(str) => assert_eq!(str.as_ref(), "foo"),
                     other => panic!("Expected Identifier for member, got {:?}", other),
                 }
                 assert_eq!(boxed_expr.owner.span(), Span::new(3, 6));
@@ -259,14 +269,14 @@ mod tests {
     #[test]
     fn function_call_expr_constructs_correctly() {
         // Given
-        let name = Spanned::new(AstNode::Identifier(Box::from("foo")), Span::new(3, 6));
-        let args: [Spanned<AstNode>; 3] = [
-            Spanned::new(AstNode::Int(64), Span::new(5, 7)),
-            Spanned::new(AstNode::Float(69.1), Span::new(10, 13)),
+        let name = Spanned::new(Expr::Identifier(Box::from("foo")), Span::new(3, 6));
+        let args: [Spanned<Expr>; 3] = [
+            Spanned::new(Expr::Int(64), Span::new(5, 7)),
+            Spanned::new(Expr::Float(69.1), Span::new(10, 13)),
             BinaryExpr::new(
-                Spanned::new(AstNode::Int(12), Span::new(15, 20)),
+                Spanned::new(Expr::Int(12), Span::new(15, 20)),
                 BinaryOp::Div,
-                Spanned::new(AstNode::Float(23.1), Span::new(20, 25)),
+                Spanned::new(Expr::Float(23.1), Span::new(20, 25)),
             ),
         ];
         let close_paren_span = Span::new(27, 28);
@@ -277,10 +287,10 @@ mod tests {
         // Then
         assert_eq!(expr.span(), Span::new(3, 28));
         match expr.value() {
-            AstNode::FunctionCallExpr(boxed_expr) => {
+            Expr::FunctionCall(boxed_expr) => {
                 assert_eq!(boxed_expr.name.span(), Span::new(3, 6));
                 match boxed_expr.name.value() {
-                    AstNode::Identifier(name) => assert_eq!(name.as_ref(), "foo"),
+                    Expr::Identifier(name) => assert_eq!(name.as_ref(), "foo"),
                     other => panic!("Expected Identifier for name, got {:?}", other),
                 }
 
@@ -288,15 +298,15 @@ mod tests {
 
                 let first_arg = boxed_expr.arguments.get(0).unwrap();
                 assert_eq!(first_arg.span(), Span::new(5, 7));
-                assert!(matches!(first_arg.value(), AstNode::Int(64)));
+                assert!(matches!(first_arg.value(), Expr::Int(64)));
 
                 let second_arg = boxed_expr.arguments.get(1).unwrap();
                 assert_eq!(second_arg.span(), Span::new(10, 13));
-                assert!(matches!(second_arg.value(), AstNode::Float(69.1)));
+                assert!(matches!(second_arg.value(), Expr::Float(69.1)));
 
                 let third_arg = boxed_expr.arguments.get(2).unwrap();
                 assert_eq!(third_arg.span(), Span::new(15, 25));
-                assert!(matches!(third_arg.value(), AstNode::BinaryExpr(_)));
+                assert!(matches!(third_arg.value(), Expr::Binary(_)));
             }
             other => panic!("Expected FunctionCallExpr, got {:?}", other),
         }
