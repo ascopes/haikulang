@@ -52,6 +52,7 @@ impl<'src> Parser<'src> {
         let semi = self.current()?;
 
         if matches!(semi.value(), Token::Semicolon) {
+            self.advance();
             Ok(ExprStatement::new(expr, semi.span()))
         } else {
             syntax_error(semi.span(), "expected a semicolon")

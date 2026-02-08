@@ -6,7 +6,6 @@ pub enum Statement {
     Empty,
     Expr(Box<ExprStatement>),
     VarDecl(Box<VarDeclStatement>),
-    Block(Box<BlockStatement>),
     If(Box<IfStatement>),
     While(Box<WhileStatement>),
 }
@@ -30,25 +29,11 @@ pub struct VarDeclStatement {
     pub value: Spanned<Expr>,
 }
 
-// TODO(ascopes): should blocks be treated as expressions that yield their last
-//  attribute as the expression result? If so, BlockStatement should be changed to a
-//  BlockExpr.
-#[derive(Clone, Debug)]
-pub struct BlockStatement {
-    pub statements: Box<[Spanned<Statement>]>,
-}
-
 #[derive(Clone, Debug)]
 pub struct IfStatement {
     pub condition: Spanned<Expr>,
-    pub if_true_block: Spanned<BlockStatement>,
-    pub else_block: Option<Spanned<ElseClause>>,
-}
-
-#[derive(Clone, Debug)]
-pub enum ElseClause {
-    Block(Box<BlockStatement>),
-    If(Box<IfStatement>),
+    pub if_true: Spanned<Statement>,
+    pub otherwise: Option<Spanned<Statement>>,
 }
 
 #[derive(Clone, Debug)]
