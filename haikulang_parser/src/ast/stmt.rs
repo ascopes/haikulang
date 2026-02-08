@@ -1,49 +1,58 @@
 use crate::ast::expr::Expr;
-use crate::span::Spanned;
+use crate::span::{Span, Spanned};
 
 #[derive(Clone, Debug)]
-pub enum Stmt {
-    Expr(Box<Expr>),
-    VarDecl(Box<VarDeclStmt>),
-    Block(Box<BlockStmt>),
-    If(Box<IfStmt>),
-    While(Box<WhileStmt>),
+pub enum Statement {
+    Empty,
+    Expr(Box<ExprStatement>),
+    VarDecl(Box<VarDeclStatement>),
+    Block(Box<BlockStatement>),
+    If(Box<IfStatement>),
+    While(Box<WhileStatement>),
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprStmt {
-    pub expr: Spanned<Stmt>,
+pub struct ExprStatement {
+    pub expr: Spanned<Expr>,
+}
+
+impl ExprStatement {
+    pub fn new(expr: Spanned<Expr>, end: Span) -> Spanned<Statement> {
+        let span = expr.span().to(end);
+        let statement = Box::new(ExprStatement { expr });
+        Spanned::new(Statement::Expr(statement), span)
+    }
 }
 
 #[derive(Clone, Debug)]
-pub struct VarDeclStmt {
+pub struct VarDeclStatement {
     pub name: Spanned<String>,
     pub value: Spanned<Expr>,
 }
 
 // TODO(ascopes): should blocks be treated as expressions that yield their last
-//  attribute as the expression result? If so, BlockStmt should be changed to a
+//  attribute as the expression result? If so, BlockStatement should be changed to a
 //  BlockExpr.
 #[derive(Clone, Debug)]
-pub struct BlockStmt {
-    pub stmts: Box<[Spanned<Stmt>]>,
+pub struct BlockStatement {
+    pub statements: Box<[Spanned<Statement>]>,
 }
 
 #[derive(Clone, Debug)]
-pub struct IfStmt {
+pub struct IfStatement {
     pub condition: Spanned<Expr>,
-    pub if_true_block: Spanned<BlockStmt>,
+    pub if_true_block: Spanned<BlockStatement>,
     pub else_block: Option<Spanned<ElseClause>>,
 }
 
 #[derive(Clone, Debug)]
 pub enum ElseClause {
-    Block(Box<BlockStmt>),
-    If(Box<IfStmt>),
+    Block(Box<BlockStatement>),
+    If(Box<IfStatement>),
 }
 
 #[derive(Clone, Debug)]
-pub struct WhileStmt {
+pub struct WhileStatement {
     pub condition: Spanned<Expr>,
-    pub body: Spanned<Stmt>,
+    pub body: Spanned<Statement>,
 }
