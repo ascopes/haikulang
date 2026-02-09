@@ -263,17 +263,8 @@ impl<'src> Parser<'src> {
     fn parse_selector(&mut self, owner: Spanned<Expr>) -> ParserResult<Expr> {
         debug_assert_matches!(self.current()?.value(), Token::Period);
         self.advance();
-        let identifier = self.current()?;
-
-        match identifier.value() {
-            Token::Identifier(name) => {
-                let identifier = Spanned::new(name.to_string(), identifier.span());
-                let expr = MemberAccessExpr::new(owner, identifier);
-                self.advance();
-                Ok(expr)
-            }
-            _ => syntax_error(identifier.span(), "expected identifier"),
-        }
+        let identifier = self.eat_identifier()?;
+        Ok(MemberAccessExpr::new(owner, identifier))
     }
 
     // function_call ::= LEFT_PAREN , arg_list , RIGHT_PAREN ;
