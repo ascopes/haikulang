@@ -1,6 +1,5 @@
 use crate::ast::stmt::*;
 use crate::lexer::token::Token;
-use crate::parser::error::syntax_error;
 use crate::parser::parser::{Parser, ParserResult};
 use crate::span::Spanned;
 
@@ -26,36 +25,34 @@ impl<'src> Parser<'src> {
 
     // empty_statement ::= SEMICOLON ;
     fn parse_empty_statement(&mut self) -> ParserResult<Statement> {
-        let span = self.current()?.span();
-        Ok(Spanned::new(Statement::Empty, span))
+        let token = self.eat(|token| matches!(token, Token::Semicolon), "semicolon")?;
+        Ok(Spanned::new(Statement::Empty, token.span()))
     }
 
     fn parse_var_decl_statement(&mut self) -> ParserResult<Statement> {
+        let first = self.eat(|token| matches!(token, Token::Let), "'let' keyword")?;
         todo!("not implemented");
     }
 
     fn parse_if_statement(&mut self) -> ParserResult<Statement> {
+        let first = self.eat(|token| matches!(token, Token::If), "'if' keyword")?;
         todo!("not implemented");
     }
 
     fn parse_while_statement(&mut self) -> ParserResult<Statement> {
+        let first = self.eat(|token| matches!(token, Token::While), "'while' keyword")?;
         todo!("not implemented");
     }
 
     fn parse_block_statement(&mut self) -> ParserResult<Statement> {
+        let first = self.eat(|token| matches!(token, Token::LeftBrace), "left brace")?;
         todo!("not implemented");
     }
 
     // expr_statement ::= expr , SEMICOLON ;
     fn parse_expr_statement(&mut self) -> ParserResult<Statement> {
         let expr = self.parse_expr()?;
-        let semi = self.current()?;
-
-        if matches!(semi.value(), Token::Semicolon) {
-            self.advance();
-            Ok(ExprStatement::new(expr, semi.span()))
-        } else {
-            syntax_error(semi.span(), "expected a semicolon")
-        }
+        let semi = self.eat(|token| matches!(token, Token::Semicolon), "semicolon")?;
+        Ok(ExprStatement::new(expr, semi.span()))
     }
 }

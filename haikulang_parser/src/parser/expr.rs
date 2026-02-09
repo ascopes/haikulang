@@ -1,4 +1,5 @@
 use crate::ast::expr::*;
+use crate::debug_assert_matches;
 use crate::lexer::token::Token;
 use crate::parser::error::syntax_error;
 use crate::parser::parser::{Parser, ParserResult};
@@ -260,6 +261,7 @@ impl<'src> Parser<'src> {
 
     // selector      ::= PERIOD , IDENTIFIER ;
     fn parse_selector(&mut self, owner: Spanned<Expr>) -> ParserResult<Expr> {
+        debug_assert_matches!(self.current()?.value(), Token::Period);
         self.advance();
         let identifier = self.current()?;
 
@@ -277,7 +279,10 @@ impl<'src> Parser<'src> {
     // function_call ::= LEFT_PAREN , arg_list , RIGHT_PAREN ;
     // arg_list      ::= expr , ( COMMA , expr )* ;
     fn parse_function_call(&mut self, name: Spanned<Expr>) -> ParserResult<Expr> {
+        debug_assert_matches!(name.value(), Expr::Identifier(_) | Expr::MemberAccess(_));
+        debug_assert_matches!(self.current()?.value(), Token::LeftParen);
         self.advance();
+
         let mut args = Vec::<Spanned<Expr>>::new();
 
         // Allow zero or more arguments, which are expressions.
@@ -291,12 +296,10 @@ impl<'src> Parser<'src> {
             }
         }
 
-        let right_paren = self.current()?;
-        if !matches!(right_paren.value(), Token::RightParen) {
-            return syntax_error(right_paren.span(), "expected right parenthesis");
-        };
-
-        self.advance();
+        let right_paren = self.eat(
+            |token| matches!(token, Token::RightParen),
+            "right parenthesis",
+        )?;
 
         Ok(FunctionCallExpr::new(
             name,
@@ -320,15 +323,12 @@ impl<'src> Parser<'src> {
             self.advance();
 
             let expr = self.parse_expr()?;
-            let last = self.current()?;
+            self.eat(
+                |token| matches!(token, Token::RightParen),
+                "right parenthesis",
+            )?;
 
-            return match last.value() {
-                Token::RightParen => {
-                    self.advance();
-                    Ok(expr)
-                }
-                _ => syntax_error(last.span(), "expected right parenthesis"),
-            };
+            return Ok(expr);
         }
 
         let atom = match first.value() {
@@ -351,7 +351,7 @@ impl<'src> Parser<'src> {
     }
 
     /*
-     * Helpers.
+     * Helpers
      */
 
     fn parse_binary_op_left_assoc<OpFn, ParserFn>(
