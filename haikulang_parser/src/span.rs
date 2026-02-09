@@ -30,7 +30,7 @@ impl fmt::Display for Span {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Spanned<T: Clone> {
     value: T,
     span: Span,

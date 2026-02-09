@@ -31,7 +31,23 @@ impl<'src> Parser<'src> {
 
     fn parse_var_decl_statement(&mut self) -> ParserResult<Statement> {
         let first = self.eat(|token| matches!(token, Token::Let), "'let' keyword")?;
-        todo!("not implemented");
+        let identifier = self.eat_identifier()?;
+
+        let expr = if self.current()?.value() == Token::Eq {
+            self.advance();
+            Some(self.parse_expr()?)
+        } else {
+            None
+        };
+
+        let semi = self.eat(|token| matches!(token, Token::Semicolon), "semicolon")?;
+
+        Ok(VarDeclStatement::new(
+            first.span(),
+            identifier,
+            expr,
+            semi.span(),
+        ))
     }
 
     fn parse_if_statement(&mut self) -> ParserResult<Statement> {

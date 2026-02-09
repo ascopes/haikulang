@@ -1,7 +1,7 @@
 use crate::lexer::token::{FloatLit, IntLit, StrLit};
 use crate::span::{Span, Spanned};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     Binary(Box<BinaryExpr>),
     Unary(Box<UnaryExpr>),
@@ -15,7 +15,7 @@ pub enum Expr {
     Identifier(StrLit),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BinaryExpr {
     pub left: Spanned<Expr>,
     pub op: BinaryOp,
@@ -55,7 +55,7 @@ pub enum BinaryOp {
     GreaterEq,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
     pub value: Spanned<Expr>,
@@ -77,7 +77,7 @@ pub enum UnaryOp {
     Invert,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AssignmentExpr {
     pub lvalue: Spanned<Expr>,
     pub op: Option<BinaryOp>,
@@ -96,7 +96,7 @@ impl AssignmentExpr {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MemberAccessExpr {
     pub owner: Spanned<Expr>,
     pub member: Spanned<String>,
@@ -110,7 +110,7 @@ impl MemberAccessExpr {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FunctionCallExpr {
     pub name: Spanned<Expr>,
     pub arguments: Box<[Spanned<Expr>]>,
