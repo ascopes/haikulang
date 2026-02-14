@@ -5,6 +5,7 @@ use crate::span::{Span, Spanned};
 pub enum Statement {
     Expr(Box<ExprStatement>),
     VarDecl(Box<VarDeclStatement>),
+    Use(Box<UseStatement>),
     If(Box<IfStatement>),
     While(Box<WhileStatement>),
     Block(Box<BlockStatement>),
@@ -42,6 +43,19 @@ impl VarDeclStatement {
         };
         let statement = Box::new(VarDeclStatement { identifier, expr });
         Spanned::new(Statement::VarDecl(statement), span)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UseStatement {
+    pub path: Spanned<String>,
+}
+
+impl UseStatement {
+    pub fn new(start: Span, path: Spanned<String>) -> Spanned<Statement> {
+        let span = start.to(path.span());
+        let statement = Box::new(UseStatement { path });
+        Spanned::new(Statement::Use(statement), span)
     }
 }
 

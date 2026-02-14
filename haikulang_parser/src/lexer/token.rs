@@ -133,6 +133,9 @@ pub enum Token {
     #[token("let")]
     Let,
 
+    #[token("use")]
+    Use,
+
     /*
      * Control flow syntax
      */
@@ -335,6 +338,7 @@ mod tests {
     #[test_case(     "for",               Token::For ; "for keyword")]
     #[test_case(   "while",             Token::While ; "while keyword")]
     #[test_case(     "let",               Token::Let ; "let keyword")]
+    #[test_case(     "use",               Token::Let ; "use keyword")]
     #[test_case(       ";",         Token::Semicolon ; "semicolon")]
     #[test_case(       "{",         Token::LeftBrace ; "left brace")]
     #[test_case(       "}",        Token::RightBrace ; "right brace")]

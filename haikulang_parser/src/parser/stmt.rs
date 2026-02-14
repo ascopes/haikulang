@@ -7,6 +7,7 @@ impl<'src> Parser<'src> {
     // statement ::= if_statement
     //             | while_statement
     //             | block_statement
+    //             | use_statement , SEMICOLON
     //             | var_decl_statement , SEMICOLON
     //             | expr , SEMICOLON
     //             ;
@@ -16,6 +17,11 @@ impl<'src> Parser<'src> {
             Token::If => self.parse_if_statement(),
             Token::While => self.parse_while_statement(),
             Token::LeftBrace => self.parse_block_statement(),
+            Token::Use => {
+                let statement = self.parse_use_statement()?;
+                self.eat(|token| token == Token::Semicolon, "semicolon")?;
+                Ok(statement)
+            }
             Token::Let => {
                 let statement = self.parse_var_decl_statement()?;
                 self.eat(|token| token == Token::Semicolon, "semicolon")?;
@@ -77,6 +83,13 @@ impl<'src> Parser<'src> {
             right_brace_token.span(),
         );
         Ok(statement)
+    }
+
+    // use_statement ::= USE , IDENTIFIER ;
+    fn parse_use_statement(&mut self) -> ParserResult<Statement> {
+        let use_token = self.eat(|token| token == Token::Use, "'use' keyword")?;
+        let identifier = self.eat_identifier()?;
+        Ok(UseStatement::new(use_token.span(), identifier))
     }
 
     // var_decl_statement ::= LET , IDENTIFIER , ( EQ , expr )? ;

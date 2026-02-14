@@ -1,6 +1,4 @@
-use crate::lexer::token::Token;
-use logos::Lexer;
-use std::fmt::{Display, Formatter, write};
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub enum LexerError {

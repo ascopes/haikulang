@@ -1,4 +1,8 @@
 {
+    use std;
+
+    {}
+
     let a = 1 + 2;
     let b = 3;
     print(a + b / (2 ** 4));
