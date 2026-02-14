@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::Range;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Span {
@@ -21,6 +22,10 @@ impl Span {
 
     pub fn to(&self, other: Self) -> Self {
         Self::new(self.start, other.end)
+    }
+
+    pub fn range(&self) -> Range<usize> {
+        self.start..self.end
     }
 }
 

@@ -7,7 +7,7 @@ pub type FloatLit = f64;
 pub type StrLit = Box<str>;
 
 #[derive(Clone, Debug, Logos, PartialEq)]
-#[logos(error = LexerError)]
+#[logos(error(LexerError))]
 #[logos(skip "[ \n\r\t]+")]
 #[logos(utf8 = true)]
 pub enum Token {
@@ -33,17 +33,20 @@ pub enum Token {
     //               | '\\"'
     //               | '\\\\'
     //               | '\\u' , [A-Fa-f0-9]{4}    /* unicode escape sequence like \u123a */
-    //               | any character except ascii control sequences
+    //               | any character except ascii/unicode control sequences, carriage returns, line feeds
     //               ;
+    //
+    // We do not directly consume this exact grammar here; we instead use something much more
+    // lenient. Any checks for validity are all dealt with in the callback for this lexer so that
+    // we can give helpful error messages.
+    // This includes validating unicode escape sequences; checking strings are not crossing multiple
+    // lines; ensuring the string has no control characters; ensuring the string literal has a
+    // closing quote as the last character in the token.
     #[regex(
         r#"(?x)
-            "                           # Opening quote
-            (
-                \\[nrt\\"]              # \n, \r, \t, \", or \\
-                |\\u[A-Fa-f0-9]{4}      # \uABCD, where ABCD is a hexadecimal sequence
-                |[^\x00-\x1F]           # any character other than ascii control sequences
-            )*
-            "                           # Closing quote
+            "            # Opening quote
+            ([^"]|\\")*  # Any character that is not a closing quote (treat \" as an escape).
+            "?           # Closing quote, optional. If we don't match it, we raise an error.
         "#, callback = parse_string
     )]
     StringLit(StrLit),

@@ -287,10 +287,7 @@ impl<'src> Parser<'src> {
             }
         }
 
-        let right_paren = self.eat(
-            |token| matches!(token, Token::RightParen),
-            "right parenthesis",
-        )?;
+        let right_paren = self.eat(|token| token == Token::RightParen, "right parenthesis")?;
 
         Ok(FunctionCallExpr::new(
             name,
@@ -310,14 +307,11 @@ impl<'src> Parser<'src> {
     fn parse_atom(&mut self) -> ParserResult<Expr> {
         let first = self.current()?;
 
-        if matches!(first.value(), Token::LeftParen) {
+        if first.value() == Token::LeftParen {
             self.advance();
 
             let expr = self.parse_expr()?;
-            self.eat(
-                |token| matches!(token, Token::RightParen),
-                "right parenthesis",
-            )?;
+            self.eat(|token| token == Token::RightParen, "right parenthesis")?;
 
             return Ok(expr);
         }

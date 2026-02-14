@@ -4,71 +4,92 @@ use crate::parser::parser::{Parser, ParserResult};
 use crate::span::Spanned;
 
 impl<'src> Parser<'src> {
-    // statement ::= empty_statement
-    //             | var_decl_statement
-    //             | if_statement
+    // statement ::= if_statement
     //             | while_statement
     //             | block_statement
-    //             | expr_statement
+    //             | var_decl_statement , SEMICOLON
+    //             | expr , SEMICOLON
     //             ;
     pub fn parse_statement(&mut self) -> ParserResult<Statement> {
         let first = self.current()?;
         match first.value() {
-            Token::Semicolon => self.parse_empty_statement(),
-            Token::Let => self.parse_var_decl_statement(),
             Token::If => self.parse_if_statement(),
             Token::While => self.parse_while_statement(),
             Token::LeftBrace => self.parse_block_statement(),
-            _ => self.parse_expr_statement(),
+            Token::Let => {
+                let statement = self.parse_var_decl_statement()?;
+                self.eat(|token| token == Token::Semicolon, "semicolon")?;
+                Ok(statement)
+            }
+            _ => {
+                let expr = self.parse_expr()?;
+                let statement = ExprStatement::new(expr);
+                self.eat(|token| token == Token::Semicolon, "semicolon")?;
+                Ok(statement)
+            }
         }
     }
 
-    // empty_statement ::= SEMICOLON ;
-    fn parse_empty_statement(&mut self) -> ParserResult<Statement> {
-        let token = self.eat(|token| matches!(token, Token::Semicolon), "semicolon")?;
-        Ok(Spanned::new(Statement::Empty, token.span()))
+    // if_statement ::= IF , LEFT_PAREN , expr , RIGHT_PAREN , statement , ( ELSE , statement )? ;
+    fn parse_if_statement(&mut self) -> ParserResult<Statement> {
+        let if_token = self.eat(|token| token == Token::If, "'if' keyword")?;
+        self.eat(|token| token == Token::LeftParen, "left parenthesis")?;
+        let condition = self.parse_expr()?;
+        self.eat(|token| token == Token::RightParen, "right parenthesis")?;
+        let body = self.parse_statement()?;
+
+        let otherwise = if self.current()?.value() == Token::Else {
+            self.advance();
+            Some(self.parse_statement()?)
+        } else {
+            None
+        };
+
+        let statement = IfStatement::new(if_token.span(), condition, body, otherwise);
+        Ok(statement)
     }
 
+    // while_statement ::= WHILE , LEFT_PAREN , expr , RIGHT_PAREN , statement ;
+    fn parse_while_statement(&mut self) -> ParserResult<Statement> {
+        let while_token = self.eat(|token| token == Token::While, "'while' keyword")?;
+        self.eat(|token| token == Token::LeftParen, "left parenthesis")?;
+        let condition = self.parse_expr()?;
+        self.eat(|token| token == Token::RightParen, "right parenthesis")?;
+        let body = self.parse_statement()?;
+
+        let statement = WhileStatement::new(while_token.span(), condition, body);
+        Ok(statement)
+    }
+
+    // block_statement ::= LEFT_BRACE , statement* , RIGHT_BRACE ;
+    fn parse_block_statement(&mut self) -> ParserResult<Statement> {
+        let left_brace_token = self.eat(|token| token == Token::LeftBrace, "left brace")?;
+        let mut statements = Vec::<Spanned<Statement>>::new();
+
+        while self.current()?.value() != Token::RightBrace {
+            statements.push(self.parse_statement()?);
+        }
+
+        let right_brace_token = self.eat(|token| token == Token::RightBrace, "right brace")?;
+        let statement = BlockStatement::new(
+            left_brace_token.span(),
+            statements.into_boxed_slice(),
+            right_brace_token.span(),
+        );
+        Ok(statement)
+    }
+
+    // var_decl_statement ::= LET , IDENTIFIER , ( EQ , expr )? ;
     fn parse_var_decl_statement(&mut self) -> ParserResult<Statement> {
-        let first = self.eat(|token| matches!(token, Token::Let), "'let' keyword")?;
+        let let_token = self.eat(|token| token == Token::Let, "'let' keyword")?;
         let identifier = self.eat_identifier()?;
 
-        let expr = if self.current()?.value() == Token::Eq {
+        let expr = if self.current()?.value() == Token::Assign {
             self.advance();
             Some(self.parse_expr()?)
         } else {
             None
         };
-
-        let semi = self.eat(|token| matches!(token, Token::Semicolon), "semicolon")?;
-
-        Ok(VarDeclStatement::new(
-            first.span(),
-            identifier,
-            expr,
-            semi.span(),
-        ))
-    }
-
-    fn parse_if_statement(&mut self) -> ParserResult<Statement> {
-        let first = self.eat(|token| matches!(token, Token::If), "'if' keyword")?;
-        todo!("not implemented");
-    }
-
-    fn parse_while_statement(&mut self) -> ParserResult<Statement> {
-        let first = self.eat(|token| matches!(token, Token::While), "'while' keyword")?;
-        todo!("not implemented");
-    }
-
-    fn parse_block_statement(&mut self) -> ParserResult<Statement> {
-        let first = self.eat(|token| matches!(token, Token::LeftBrace), "left brace")?;
-        todo!("not implemented");
-    }
-
-    // expr_statement ::= expr , SEMICOLON ;
-    fn parse_expr_statement(&mut self) -> ParserResult<Statement> {
-        let expr = self.parse_expr()?;
-        let semi = self.eat(|token| matches!(token, Token::Semicolon), "semicolon")?;
-        Ok(ExprStatement::new(expr, semi.span()))
+        Ok(VarDeclStatement::new(let_token.span(), identifier, expr))
     }
 }

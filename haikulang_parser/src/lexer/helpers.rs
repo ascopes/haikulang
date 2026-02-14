@@ -20,6 +20,11 @@ pub fn parse_identifier(lex: &mut logos::Lexer<Token>) -> StrLit {
 
 pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StrLit, LexerError> {
     let unparsed = lex.slice();
+
+    if !unparsed.ends_with('"') {
+        return Err(LexerError::UnclosedStringLit(unparsed.to_string()));
+    }
+
     let mut parsed = String::new();
 
     // Start at 1, end at len-1 to remove open and close quotes.
@@ -33,10 +38,28 @@ pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StrLit, LexerError>
                 parsed.push_str(parsed_escape);
                 offset += length;
             }
-            c => {
-                offset += 1;
-                parsed.push_str(c);
-            }
+            c => match c.chars().nth(0).unwrap() {
+                '\n' => {
+                    return Err(LexerError::InvalidStringLit(
+                        "unexpected line feed encountered".to_string(),
+                    ));
+                }
+                '\r' => {
+                    return Err(LexerError::InvalidStringLit(
+                        "unexpected carriage return encountered".to_string(),
+                    ));
+                }
+                c if c.is_control() => {
+                    return Err(LexerError::InvalidStringLit(format!(
+                        "unexpected control byte sequence encountered: {}",
+                        c.escape_unicode(),
+                    )));
+                }
+                _ => {
+                    offset += 1;
+                    parsed.push_str(c);
+                }
+            },
         }
     }
 
@@ -58,12 +81,15 @@ fn parse_string_escape_char(text: &str, offset: usize) -> Result<(&str, usize), 
             match str::from_utf8(bytes) {
                 Ok(utf8_char) => Ok((utf8_char, 5)),
                 Err(err) => Err(LexerError::InvalidStringLit(format!(
-                    "Failed to parse invalid unicode codepoint \\u{}: {}",
+                    "failed to parse invalid unicode codepoint \\u{}: {}",
                     codepoint_string, err
                 ))),
             }
         }
-        _ => unreachable!(),
+        other => Err(LexerError::InvalidStringLit(format!(
+            "unknown escape sequence in string: \\{}",
+            other.escape_default()
+        ))),
     }
 }
 
@@ -87,7 +113,7 @@ fn parse_int_lit_radix(text: &str, radix: u32) -> Result<IntLit, LexerError> {
     // getting this far.
     IntLit::from_str_radix(text.replace("_", "").as_str(), radix).map_err(|err| {
         LexerError::InvalidIntLit(format!(
-            "Failed to parse base-{} value {:?}: {}",
+            "failed to parse base-{} value {:?}: {}",
             radix, text, err
         ))
     })
@@ -100,7 +126,7 @@ pub fn parse_float_lit(lex: &mut logos::Lexer<Token>) -> Result<FloatLit, LexerE
     let text = lex.slice();
     FloatLit::from_str(text.replace("_", "").as_str()).map_err(|err| {
         LexerError::InvalidFloatLit(format!(
-            "Failed to parse base-10 float value {:?}: {}",
+            "failed to parse base-10 float value {:?}: {}",
             text, err
         ))
     })

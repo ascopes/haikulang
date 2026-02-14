@@ -54,6 +54,7 @@ impl<'src> Parser<'src> {
     pub(super) fn eat_identifier(&mut self) -> ParserResult<String> {
         let current = self.current()?;
         if let Token::Identifier(name) = current.value() {
+            self.advance();
             Ok(Spanned::new(name.to_string(), current.span()))
         } else {
             syntax_error(current.span(), "expected identifier")

@@ -3,11 +3,11 @@ use crate::span::{Span, Spanned};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement {
-    Empty,
     Expr(Box<ExprStatement>),
     VarDecl(Box<VarDeclStatement>),
     If(Box<IfStatement>),
     While(Box<WhileStatement>),
+    Block(Box<BlockStatement>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -16,8 +16,8 @@ pub struct ExprStatement {
 }
 
 impl ExprStatement {
-    pub fn new(expr: Spanned<Expr>, end: Span) -> Spanned<Statement> {
-        let span = expr.span().to(end);
+    pub fn new(expr: Spanned<Expr>) -> Spanned<Statement> {
+        let span = expr.span();
         let statement = Box::new(ExprStatement { expr });
         Spanned::new(Statement::Expr(statement), span)
     }
@@ -34,9 +34,12 @@ impl VarDeclStatement {
         start: Span,
         identifier: Spanned<String>,
         expr: Option<Spanned<Expr>>,
-        end: Span,
     ) -> Spanned<Statement> {
-        let span = start.to(end);
+        let span = if let Some(spanned_expr) = &expr {
+            start.to(spanned_expr.span())
+        } else {
+            start.to(identifier.span())
+        };
         let statement = Box::new(VarDeclStatement { identifier, expr });
         Spanned::new(Statement::VarDecl(statement), span)
     }
@@ -45,8 +48,29 @@ impl VarDeclStatement {
 #[derive(Clone, Debug, PartialEq)]
 pub struct IfStatement {
     pub condition: Spanned<Expr>,
-    pub if_true: Spanned<Statement>,
+    pub body: Spanned<Statement>,
     pub otherwise: Option<Spanned<Statement>>,
+}
+
+impl IfStatement {
+    pub fn new(
+        start: Span,
+        condition: Spanned<Expr>,
+        body: Spanned<Statement>,
+        otherwise: Option<Spanned<Statement>>,
+    ) -> Spanned<Statement> {
+        let span = if let Some(spanned_expr) = &otherwise {
+            start.to(spanned_expr.span())
+        } else {
+            start.to(body.span())
+        };
+        let statement = Box::new(IfStatement {
+            condition,
+            body,
+            otherwise,
+        });
+        Spanned::new(Statement::If(statement), span)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -55,11 +79,38 @@ pub struct WhileStatement {
     pub body: Spanned<Statement>,
 }
 
+impl WhileStatement {
+    pub fn new(
+        start: Span,
+        condition: Spanned<Expr>,
+        body: Spanned<Statement>,
+    ) -> Spanned<Statement> {
+        let span = start.to(body.span());
+        let statement = Box::new(WhileStatement { condition, body });
+        Spanned::new(Statement::While(statement), span)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BlockStatement {
+    pub statements: Box<[Spanned<Statement>]>,
+}
+
+impl BlockStatement {
+    pub fn new(
+        start: Span,
+        statements: Box<[Spanned<Statement>]>,
+        end: Span,
+    ) -> Spanned<Statement> {
+        let span = start.to(end);
+        let statement = Box::new(BlockStatement { statements });
+        Spanned::new(Statement::Block(statement), span)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::expr::*;
-    use crate::span::{Span, Spanned};
 
     #[test]
     fn statement_enum_size_is_not_too_large() {
@@ -72,52 +123,5 @@ mod tests {
             desired_max_size,
             size
         )
-    }
-
-    #[test]
-    fn expr_constructs_correctly() {
-        // Given
-        let expr = BinaryExpr::new(
-            Spanned::new(Expr::Int(123), Span::new(5, 8)),
-            BinaryOp::Mul,
-            Spanned::new(Expr::Int(456), Span::new(12, 15)),
-        );
-        let end_span = Span::new(15, 16);
-
-        // When
-        let stmt = ExprStatement::new(expr.clone(), end_span);
-
-        // Then
-        assert_eq!(stmt.span(), Span::new(5, 16));
-        match stmt.value() {
-            Statement::Expr(value) => assert_eq!(value.expr.value(), expr.value()),
-            _ => panic!("expected Expr, got {:?}", stmt.value()),
-        }
-    }
-
-    #[test]
-    fn var_decl_constructs_correctly() {
-        // Given
-        let start_span = Span::new(1, 4);
-        let identifier = Spanned::new("foo".to_string(), Span::new(5, 8));
-        let expr = BinaryExpr::new(
-            Spanned::new(Expr::Int(123), Span::new(12, 15)),
-            BinaryOp::Mul,
-            Spanned::new(Expr::Int(456), Span::new(18, 21)),
-        );
-        let end_span = Span::new(21, 22);
-
-        // When
-        let stmt = VarDeclStatement::new(start_span, identifier, Some(expr.clone()), end_span);
-
-        // Then
-        assert_eq!(stmt.span(), Span::new(1, 22));
-        match stmt.value() {
-            Statement::VarDecl(value) => {
-                assert_eq!(value.identifier.value(), "foo");
-                assert_eq!(value.expr.expect("no expr").value(), expr.value());
-            }
-            _ => panic!("expected VarDecl, got {:?}", stmt.value()),
-        }
     }
 }

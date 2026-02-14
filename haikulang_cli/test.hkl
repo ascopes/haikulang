@@ -1,0 +1,13 @@
+{
+    let a = 1 + 2;
+    let b = 3;
+    print(a + b / (2 ** 4));
+
+    if (a * b > 32) {
+        println("foo");
+    } else {
+        println("bar");
+    }
+
+    "hello";
+}
