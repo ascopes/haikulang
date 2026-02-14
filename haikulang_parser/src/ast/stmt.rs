@@ -3,6 +3,7 @@ use crate::span::{Span, Spanned};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement {
+    Empty,
     Expr(Box<ExprStatement>),
     VarDecl(Box<VarDeclStatement>),
     Use(Box<UseStatement>),

@@ -9,7 +9,8 @@ impl<'src> Parser<'src> {
     //             | block_statement
     //             | use_statement , SEMICOLON
     //             | var_decl_statement , SEMICOLON
-    //             | expr , SEMICOLON
+    //             | expr_statement , SEMICOLON
+    //             | SEMICOLON
     //             ;
     pub fn parse_statement(&mut self) -> ParserResult<Statement> {
         let first = self.current()?;
@@ -27,13 +28,19 @@ impl<'src> Parser<'src> {
                 self.eat(|token| token == Token::Semicolon, "semicolon")?;
                 Ok(statement)
             }
+            Token::Semicolon => self.parse_empty_statement(),
             _ => {
-                let expr = self.parse_expr()?;
-                let statement = ExprStatement::new(expr);
+                let statement = self.parse_expr_statement()?;
                 self.eat(|token| token == Token::Semicolon, "semicolon")?;
                 Ok(statement)
             }
         }
+    }
+
+    // empty_statement ::= SEMICOLON ;
+    fn parse_empty_statement(&mut self) -> ParserResult<Statement> {
+        let token = self.eat(|token| token == Token::Semicolon, "semicolon")?;
+        Ok(Spanned::new(Statement::Empty, token.span()))
     }
 
     // if_statement ::= IF , LEFT_PAREN , expr , RIGHT_PAREN , statement , ( ELSE , statement )? ;
@@ -104,5 +111,10 @@ impl<'src> Parser<'src> {
             None
         };
         Ok(VarDeclStatement::new(let_token.span(), identifier, expr))
+    }
+
+    fn parse_expr_statement(&mut self) -> ParserResult<Statement> {
+        let expr = self.parse_expr()?;
+        Ok(ExprStatement::new(expr))
     }
 }
