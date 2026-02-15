@@ -1,7 +1,7 @@
 use crate::ast::expr::*;
 use crate::debug_assert_matches;
 use crate::lexer::token::Token;
-use crate::parser::error::syntax_error;
+use crate::parser::error::ParserError;
 use crate::parser::parser::{Parser, ParserResult};
 use crate::span::Spanned;
 
@@ -324,10 +324,13 @@ impl<'src> Parser<'src> {
             Token::StringLit(value) => Spanned::new(Expr::String(value), first.span()),
             Token::Identifier(value) => Spanned::new(Expr::Identifier(value), first.span()),
             _ => {
-                return syntax_error(
+                return Err(Spanned::new(
+                    ParserError::SyntaxError(
+                        "expected atom (literal, identifier, or expression within parenthesis)"
+                            .to_string(),
+                    ),
                     first.span(),
-                    "expected atom (literal, identifier, or expression within parenthesis)",
-                );
+                ));
             }
         };
 

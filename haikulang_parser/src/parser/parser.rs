@@ -1,6 +1,6 @@
 use crate::lexer::token::Token;
 use crate::lexer::token_stream::TokenStream;
-use crate::parser::error::{ParserError, syntax_error};
+use crate::parser::error::ParserError;
 use crate::span::Spanned;
 
 pub type ParserResult<T> = Result<Spanned<T>, Spanned<ParserError>>;
@@ -43,7 +43,10 @@ impl<'src> Parser<'src> {
             self.advance();
             Ok(current)
         } else {
-            syntax_error(current.span(), format!("expected {}", description))
+            Err(Spanned::new(
+                ParserError::SyntaxError(format!("expected {}", description)),
+                current.span(),
+            ))
         }
     }
 
@@ -57,7 +60,10 @@ impl<'src> Parser<'src> {
             self.advance();
             Ok(Spanned::new(name.to_string(), current.span()))
         } else {
-            syntax_error(current.span(), "expected identifier")
+            Err(Spanned::new(
+                ParserError::SyntaxError("expected identifier".to_string()),
+                current.span(),
+            ))
         }
     }
 }
