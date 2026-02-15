@@ -9,8 +9,11 @@ impl<'src> Parser<'src> {
     //             | block_statement
     //             | use_statement , SEMICOLON
     //             | var_decl_statement , SEMICOLON
-    //             | expr_statement , SEMICOLON
+    //             | break_statement , SEMICOLON
+    //             | continue_statement , SEMICOLON
+    //             | return_statement , SEMICOLON
     //             | SEMICOLON
+    //             | expr_statement , SEMICOLON  /* fallback */
     //             ;
     pub fn parse_statement(&mut self) -> ParserResult<Statement> {
         let first = self.current()?;
@@ -18,22 +21,13 @@ impl<'src> Parser<'src> {
             Token::If => self.parse_if_statement(),
             Token::While => self.parse_while_statement(),
             Token::LeftBrace => self.parse_block_statement(),
-            Token::Use => {
-                let statement = self.parse_use_statement()?;
-                self.eat(|token| token == Token::Semicolon, "semicolon")?;
-                Ok(statement)
-            }
-            Token::Let => {
-                let statement = self.parse_var_decl_statement()?;
-                self.eat(|token| token == Token::Semicolon, "semicolon")?;
-                Ok(statement)
-            }
-            Token::Semicolon => self.parse_empty_statement(),
-            _ => {
-                let statement = self.parse_expr_statement()?;
-                self.eat(|token| token == Token::Semicolon, "semicolon")?;
-                Ok(statement)
-            }
+            Token::Use => self.take_line_statement(Self::parse_use_statement),
+            Token::Let => self.take_line_statement(Self::parse_var_decl_statement),
+            Token::Break => self.take_line_statement(Self::parse_break_statement),
+            Token::Continue => self.take_line_statement(Self::parse_continue_statement),
+            Token::Return => self.take_line_statement(Self::parse_return_statement),
+            Token::Semicolon => self.take_line_statement(Self::parse_empty_statement),
+            _ => self.take_line_statement(Self::parse_expr_statement),
         }
     }
 
@@ -113,8 +107,46 @@ impl<'src> Parser<'src> {
         Ok(VarDeclStatement::new(let_token.span(), identifier, expr))
     }
 
+    // break_statement ::= BREAK ;
+    fn parse_break_statement(&mut self) -> ParserResult<Statement> {
+        let break_token = self.eat(|token| token == Token::Break, "'break' keyword")?;
+        Ok(Spanned::new(Statement::Break, break_token.span()))
+    }
+
+    // continue_statement ::= CONTINUE ;
+    fn parse_continue_statement(&mut self) -> ParserResult<Statement> {
+        let continue_token = self.eat(|token| token == Token::Continue, "'continue' keyword")?;
+        Ok(Spanned::new(Statement::Continue, continue_token.span()))
+    }
+
+    // return_statement ::= RETURN , ( expr )? ;
+    fn parse_return_statement(&mut self) -> ParserResult<Statement> {
+        let return_token = self.eat(|token| token == Token::Return, "'return' keyword")?;
+
+        let expr = if self.current()?.value() != Token::Semicolon {
+            Some(self.parse_expr()?)
+        } else {
+            None
+        };
+
+        Ok(ReturnStatement::new(return_token.span(), expr))
+    }
+
     fn parse_expr_statement(&mut self) -> ParserResult<Statement> {
         let expr = self.parse_expr()?;
         Ok(ExprStatement::new(expr))
+    }
+
+    /*
+     * Helpers
+     */
+
+    fn take_line_statement<F>(&mut self, func: F) -> ParserResult<Statement>
+    where
+        F: FnOnce(&mut Self) -> ParserResult<Statement>,
+    {
+        let statement = func(self)?;
+        self.eat(|token| token == Token::Semicolon, "semicolon")?;
+        Ok(statement)
     }
 }

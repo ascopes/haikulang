@@ -6,12 +6,23 @@
     let a = 1 + 2;
     let b = 3;
     print(a + b / (2 ** 4));
+    b = 4;
 
     if (a * b > 32) {
         println("foo");
-    } else {
+    } else if (b == 3) {
         println("bar");
+    } else {
+        bang();
     }
 
     "hello";
+    break;
+    continue;
+    return 1;
+    return;
+
+    while (true == false) {
+        explode();
+    }
 }

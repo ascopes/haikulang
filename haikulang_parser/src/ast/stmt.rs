@@ -10,6 +10,9 @@ pub enum Statement {
     If(Box<IfStatement>),
     While(Box<WhileStatement>),
     Block(Box<BlockStatement>),
+    Break,
+    Continue,
+    Return(Box<ReturnStatement>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -120,6 +123,23 @@ impl BlockStatement {
         let span = start.to(end);
         let statement = Box::new(BlockStatement { statements });
         Spanned::new(Statement::Block(statement), span)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReturnStatement {
+    pub expr: Option<Spanned<Expr>>,
+}
+
+impl ReturnStatement {
+    pub fn new(start: Span, expr: Option<Spanned<Expr>>) -> Spanned<Statement> {
+        let span = if let Some(spanned_expr) = &expr {
+            start.to(spanned_expr.span())
+        } else {
+            start
+        };
+        let statement = Box::new(ReturnStatement { expr });
+        Spanned::new(Statement::Return(statement), span)
     }
 }
 
