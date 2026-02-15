@@ -23,7 +23,7 @@ pub struct ExprStatement {
 impl ExprStatement {
     pub fn new(expr: Spanned<Expr>) -> Spanned<Statement> {
         let span = expr.span();
-        let statement = Box::new(ExprStatement { expr });
+        let statement = Box::new(Self { expr });
         Spanned::new(Statement::Expr(statement), span)
     }
 }
@@ -45,7 +45,7 @@ impl VarDeclStatement {
         } else {
             start.to(identifier.span())
         };
-        let statement = Box::new(VarDeclStatement { identifier, expr });
+        let statement = Box::new(Self { identifier, expr });
         Spanned::new(Statement::VarDecl(statement), span)
     }
 }
@@ -58,7 +58,7 @@ pub struct UseStatement {
 impl UseStatement {
     pub fn new(start: Span, path: Spanned<String>) -> Spanned<Statement> {
         let span = start.to(path.span());
-        let statement = Box::new(UseStatement { path });
+        let statement = Box::new(Self { path });
         Spanned::new(Statement::Use(statement), span)
     }
 }
@@ -82,7 +82,7 @@ impl IfStatement {
         } else {
             start.to(body.span())
         };
-        let statement = Box::new(IfStatement {
+        let statement = Box::new(Self {
             condition,
             body,
             otherwise,
@@ -104,7 +104,7 @@ impl WhileStatement {
         body: Spanned<Statement>,
     ) -> Spanned<Statement> {
         let span = start.to(body.span());
-        let statement = Box::new(WhileStatement { condition, body });
+        let statement = Box::new(Self { condition, body });
         Spanned::new(Statement::While(statement), span)
     }
 }
@@ -121,7 +121,7 @@ impl BlockStatement {
         end: Span,
     ) -> Spanned<Statement> {
         let span = start.to(end);
-        let statement = Box::new(BlockStatement { statements });
+        let statement = Box::new(Self { statements });
         Spanned::new(Statement::Block(statement), span)
     }
 }
@@ -138,7 +138,7 @@ impl ReturnStatement {
         } else {
             start
         };
-        let statement = Box::new(ReturnStatement { expr });
+        let statement = Box::new(Self { expr });
         Spanned::new(Statement::Return(statement), span)
     }
 }
