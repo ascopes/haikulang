@@ -11,7 +11,9 @@ pub struct Parser<'src> {
 
 impl<'src> Parser<'src> {
     pub fn new(stream: TokenStream<'src>) -> Self {
-        Self { stream }
+        let mut parser = Self { stream };
+        parser.consume_comments();
+        parser
     }
 
     // Return a copy of the current token within the lexer.
@@ -27,6 +29,21 @@ impl<'src> Parser<'src> {
     #[inline]
     pub(super) fn advance(&mut self) {
         self.stream.advance();
+        self.consume_comments();
+    }
+
+    // Repeatedly take comments from the token stream.
+    // Eventually, we may want to inspect comments and store them if they meet certain
+    // criteria, to allow for parsing documentation. For now though, we just discard them.
+    fn consume_comments(&mut self) {
+        while let Ok(token) = self.current()
+            && matches!(
+                token.value(),
+                Token::InlineComment(_) | Token::MultilineComment(_)
+            )
+        {
+            self.stream.advance();
+        }
     }
 
     // Verify the current token matches a predicate, advance the lexer, and return
@@ -50,9 +67,6 @@ impl<'src> Parser<'src> {
         }
     }
 
-    /*
-     * Common helpers and operations.
-     */
     #[inline]
     pub(super) fn eat_identifier(&mut self) -> ParserResult<String> {
         let current = self.current()?;
