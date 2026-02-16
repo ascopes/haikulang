@@ -17,7 +17,13 @@ pub enum Token {
     #[regex(r"//[^\r\n]*?[\r\n]?", callback = parse_inline_comment)]
     InlineComment(StrLit),
 
-    #[regex(r"/\*[^(\*/)]*?\*/", callback = parse_multiline_comment)]
+    #[regex(
+        r#"(?x)(?ms)   # match across multiple lines
+            /\*        # opening /*
+            .*?        # any content, as little as possible
+            \*/        # closing */
+        "#,
+        callback = parse_multiline_comment)]
     MultilineComment(StrLit),
 
     /*
