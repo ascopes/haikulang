@@ -1,14 +1,15 @@
 use std::fmt::{Display, Formatter};
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexerError {
     InvalidStringLit(String),
     InvalidIntLit(String),
     InvalidFloatLit(String),
     UnclosedStringLit(String),
+    UnknownToken(String),
 
     #[default]
-    UnexpectedError,
+    UnknownError,
 }
 
 impl Display for LexerError {
@@ -18,9 +19,8 @@ impl Display for LexerError {
             LexerError::InvalidIntLit(text) => write!(f, "invalid int literal - {}", text),
             LexerError::InvalidFloatLit(text) => write!(f, "invalid float literal - {}", text),
             LexerError::UnclosedStringLit(text) => write!(f, "unclosed string literal - {}", text),
-            LexerError::UnexpectedError => {
-                write!(f, "an unknown error occurred tokenizing the input")
-            }
+            LexerError::UnknownToken(value) => write!(f, "unknown token in input - {}", value),
+            LexerError::UnknownError => write!(f, "unknown error"),
         }
     }
 }
@@ -51,9 +51,14 @@ mod tests {
         ; "UnclosedStringLit"
     )]
     #[test_case(
-        LexerError::UnexpectedError,
-        "an unknown error occurred tokenizing the input"
-        ; "UnexpectedError"
+        LexerError::UnknownToken("foobar".to_string()),
+        "unknown token in input - foobar"
+        ; "UnknownToken"
+    )]
+    #[test_case(
+        LexerError::UnknownError,
+        "unknown error"
+        ; "UnknownError"
     )]
     fn test_lexer_error_formats_correctly(error: LexerError, expected: &str) {
         // Then

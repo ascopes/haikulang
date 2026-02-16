@@ -7,7 +7,7 @@ pub type FloatLit = f64;
 pub type StrLit = Box<str>;
 
 #[derive(Clone, Debug, Logos, PartialEq)]
-#[logos(error(LexerError))]
+#[logos(error(LexerError, parse_unknown_input))]
 #[logos(skip "[ \n\r\t]+")]
 #[logos(utf8 = true)]
 pub enum Token {

@@ -2,6 +2,11 @@ use crate::lexer::error::LexerError;
 use crate::lexer::token::{FloatLit, IntLit, StrLit, Token};
 use std::str::FromStr;
 
+pub fn parse_unknown_input(lex: &mut logos::Lexer<Token>) -> LexerError {
+    let text = &lex.slice()[lex.span()];
+    LexerError::UnknownToken(text.to_string())
+}
+
 pub fn parse_inline_comment(lex: &mut logos::Lexer<Token>) -> StrLit {
     let text = lex.slice();
     // Remove the leading "//"
