@@ -11,9 +11,9 @@ pub type StrLit = Box<str>;
 #[logos(skip "[ \n\r\t]+")]
 #[logos(utf8 = true)]
 pub enum Token {
-    /*
-     * Comments
-     */
+    // Used as a marker for the end of the source file within TokenStream.
+    Eof,
+
     #[regex(r"//[^\r\n]*?[\r\n]?", callback = parse_inline_comment)]
     InlineComment(StrLit),
 
@@ -23,13 +23,11 @@ pub enum Token {
             .*?        # any content, as little as possible
             \*/        # closing */
         "#,
-        callback = parse_multiline_comment)]
+        callback = parse_multiline_comment
+    )]
     MultilineComment(StrLit),
 
-    /*
-     * Literals
-     */
-    #[regex(r"[A-Za-z][A-Za-z_0-9]*", callback = parse_identifier)]
+    #[regex(r"[A-Za-z_][A-Za-z_0-9]*", callback = parse_identifier)]
     Identifier(StrLit),
 
     // STRING_LIT  ::= '"' , STRING_CHAR* , '"' ;
@@ -103,9 +101,6 @@ pub enum Token {
     )]
     FloatLit(FloatLit),
 
-    /*
-     * Keywords
-     */
     #[token("true")]
     True,
 
@@ -142,9 +137,6 @@ pub enum Token {
     #[token("use")]
     Use,
 
-    /*
-     * Control flow syntax
-     */
     #[token(";")]
     Semicolon,
 
@@ -175,15 +167,9 @@ pub enum Token {
     #[token("->")]
     Arrow,
 
-    /*
-     * Assignment operators
-     */
     #[token("=")]
     Assign,
 
-    /*
-     * Arithmetic operators
-     */
     #[token("+")]
     Add,
 
@@ -220,9 +206,6 @@ pub enum Token {
     #[token("**=")]
     PowAssign,
 
-    /*
-     * Binary operators
-     */
     #[token("&")]
     BinaryAnd,
 
@@ -256,9 +239,6 @@ pub enum Token {
     #[token(">>=")]
     BinaryShrAssign,
 
-    /*
-     * Boolean and comparative operators
-     */
     #[token("&&")]
     BoolAnd,
 
@@ -285,8 +265,6 @@ pub enum Token {
 
     #[token(">=")]
     GreaterEq,
-
-    Eof,
 }
 
 #[cfg(test)]
@@ -330,6 +308,37 @@ mod tests {
         match token {
             Token::MultilineComment(str) => assert_eq!(expected_content, str.as_ref()),
             other => panic!("expected MultilineComment, got {:?}", other),
+        }
+    }
+
+    #[test_case(                   "i" ; "single-character lowercase identifier")]
+    #[test_case(                 "foo" ; "multi-character lowercase identifier")]
+    #[test_case(                   "I" ; "single-character uppercase identifier")]
+    #[test_case(                 "FOO" ; "multi-character uppercase identifier")]
+    #[test_case(         "array_deque" ; "snake-case identifier")]
+    #[test_case(          "arrayDeque" ; "camel-case identifier")]
+    #[test_case(          "ArrayDeque" ; "pascal-case identifier")]
+    #[test_case(                   "_" ; "single-character underscore identifier")]
+    #[test_case(              "_state" ; "lowercase identifier with leading underscore")]
+    #[test_case(              "state_" ; "lowercase identifier with trailing underscore")]
+    #[test_case(               "_JAZZ" ; "uppercase identifier with leading underscore")]
+    #[test_case(               "JAZZ_" ; "uppercase identifier with trailing underscore")]
+    #[test_case("many__under___scores" ; "repeated underscores")]
+    #[test_case(              "http11" ; "lowercase with trailing numbers")]
+    #[test_case(               "HTTP2" ; "uppercase with trailing numbers")]
+    #[test_case(        "http3session" ; "numbers in the middle of identifiers")]
+    fn identifiers_are_parsed_correctly(identifier: &str) {
+        // Given
+        let mut lexer = Token::lexer(identifier);
+
+        // When
+        let token = lexer.next().unwrap().unwrap();
+
+        // Then
+        if let Token::Identifier(boxed_str) = token {
+            assert_eq!(&*boxed_str, identifier);
+        } else {
+            panic!("expected identifier, got {:?}", token);
         }
     }
 
