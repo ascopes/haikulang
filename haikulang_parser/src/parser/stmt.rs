@@ -1,6 +1,6 @@
 use crate::ast::stmt::*;
 use crate::lexer::token::Token;
-use crate::parser::parser::{Parser, ParserResult};
+use crate::parser::core::{Parser, ParserResult};
 use crate::span::Spanned;
 
 impl<'src> Parser<'src> {

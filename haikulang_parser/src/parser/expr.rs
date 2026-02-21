@@ -1,8 +1,8 @@
 use crate::ast::expr::*;
 use crate::debug_assert_matches;
 use crate::lexer::token::Token;
+use crate::parser::core::{Parser, ParserResult};
 use crate::parser::error::ParserError;
-use crate::parser::parser::{Parser, ParserResult};
 use crate::span::Spanned;
 
 //noinspection DuplicatedCode

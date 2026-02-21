@@ -1,8 +1,8 @@
 use ariadne::{Color, Config, Label, Report, ReportKind, Source};
 use haikulang_parser::ast::stmt::Statement;
 use haikulang_parser::lexer::token_stream::TokenStream;
+use haikulang_parser::parser::core::{Parser, ParserResult};
 use haikulang_parser::parser::error::ParserError;
-use haikulang_parser::parser::parser::{Parser, ParserResult};
 use haikulang_parser::span::Spanned;
 use std::env::args;
 use std::process::exit;
