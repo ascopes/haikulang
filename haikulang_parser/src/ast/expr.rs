@@ -105,4 +105,30 @@ mod tests {
             size
         )
     }
+
+    #[test]
+    fn binary_op_enum_size_is_not_too_large() {
+        let desired_max_size = 8;
+        let size = size_of::<BinaryOp>();
+
+        assert!(
+            size <= desired_max_size,
+            "BinaryOp enum size is too large (wanted <= {} bytes, was {} bytes), consider boxing elements to reduce the size.",
+            desired_max_size,
+            size
+        )
+    }
+
+    #[test]
+    fn unary_op_enum_size_is_not_too_large() {
+        let desired_max_size = 8;
+        let size = size_of::<UnaryOp>();
+
+        assert!(
+            size <= desired_max_size,
+            "UnaryOp enum size is too large (wanted <= {} bytes, was {} bytes), consider boxing elements to reduce the size.",
+            desired_max_size,
+            size
+        )
+    }
 }
