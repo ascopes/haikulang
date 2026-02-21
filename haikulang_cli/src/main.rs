@@ -5,10 +5,10 @@ use haikulang_parser::parser::core::{Parser, ParserResult};
 use haikulang_parser::parser::error::ParserError;
 use haikulang_parser::span::Spanned;
 use std::env::args;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::str::FromStr;
-use std::{fs, io};
+use std::{fs, io, path};
 
 fn main() {
     let files: Vec<String> = args().skip(1).collect();
@@ -18,8 +18,9 @@ fn main() {
     }
 
     for file in files {
-        match fs::read_to_string(&file) {
-            Ok(content) => match parse(content.as_str()) {
+        let path = path::absolute(PathBuf::from_str(&file).unwrap()).unwrap();
+        match fs::read_to_string(&path) {
+            Ok(content) => match parse(&path, content.as_str()) {
                 Ok(ast) => println!("{:?}", ast),
                 Err(err) => report_parser_error(file.as_str(), content.as_str(), err),
             },
@@ -28,10 +29,9 @@ fn main() {
     }
 }
 
-fn parse(file: &str) -> ParserResult<CompilationUnit> {
-    let tokens = TokenStream::new(file);
-    let path = PathBuf::from_str(file).unwrap();
-    let mut parser = Parser::new(tokens, path.as_path());
+fn parse(path: &Path, content: &str) -> ParserResult<CompilationUnit> {
+    let tokens = TokenStream::new(content);
+    let mut parser = Parser::new(tokens, path);
     parser.parse()
 }
 

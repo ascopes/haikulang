@@ -292,18 +292,16 @@ impl<'src> Parser<'src> {
         );
 
         let left_paren = self.eat(Token::LeftParen, "left parenthesis")?;
-        self.advance();
-
         let mut arguments = Vec::<Spanned<Expr>>::new();
 
         // Allow zero or more arguments, which are expressions.
         while !matches!(self.current()?.value(), Token::RightParen) {
             arguments.push(self.parse_expr()?);
 
-            if !matches!(self.current()?.value(), Token::Comma) {
-                break;
-            } else {
+            if matches!(self.current()?.value(), Token::Comma) {
                 self.advance();
+            } else {
+                break;
             }
         }
 

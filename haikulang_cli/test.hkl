@@ -1,3 +1,6 @@
+/**
+ * A basic HKL program that does some arithmetic.
+ */
 use std;
 
 struct Factorial {
