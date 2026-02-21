@@ -22,3 +22,21 @@ pub enum CompilationUnitMember {
 pub struct UseDecl {
     pub path: Spanned<IdentifierPath>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compilation_unit_member_enum_size_is_not_too_large() {
+        let desired_max_size = 24;
+        let size = size_of::<CompilationUnitMember>();
+
+        assert!(
+            size <= desired_max_size,
+            "CompilationUnitMember enum size is too large (wanted <= {} bytes, was {} bytes), consider boxing elements to reduce the size.",
+            desired_max_size,
+            size
+        )
+    }
+}
