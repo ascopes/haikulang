@@ -1,19 +1,26 @@
+use crate::ast::unit::CompilationUnit;
 use crate::lexer::token::Token;
 use crate::lexer::token_stream::TokenStream;
 use crate::parser::error::ParserError;
 use crate::span::Spanned;
+use std::path::Path;
 
 pub type ParserResult<T> = Result<Spanned<T>, Spanned<ParserError>>;
 
 pub struct Parser<'src> {
     stream: TokenStream<'src>,
+    path: &'src Path,
 }
 
 impl<'src> Parser<'src> {
-    pub fn new(stream: TokenStream<'src>) -> Self {
-        let mut parser = Self { stream };
+    pub fn new(stream: TokenStream<'src>, path: &'src Path) -> Self {
+        let mut parser = Self { stream, path };
         parser.consume_comments();
         parser
+    }
+
+    pub fn parse(&mut self) -> ParserResult<CompilationUnit> {
+        self.parse_compilation_unit(self.path)
     }
 
     // Return a copy of the current token within the lexer.

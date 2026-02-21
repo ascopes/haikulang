@@ -3,7 +3,7 @@ use crate::ast::stmt::Statement;
 use crate::span::Spanned;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Function {
+pub struct FunctionDecl {
     pub name: Spanned<Identifier>,
     pub parameters: Spanned<Box<[Spanned<ParameterDecl>]>>,
     pub return_type: Option<Spanned<TypeName>>,

@@ -1,6 +1,6 @@
 use crate::ast::ident::Identifier;
 use crate::lexer::token::{FloatLit, IntLit, StrLit};
-use crate::span::{Span, Spanned};
+use crate::span::Spanned;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {

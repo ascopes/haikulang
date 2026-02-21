@@ -1,11 +1,13 @@
 use ariadne::{Color, Config, Label, Report, ReportKind, Source};
-use haikulang_parser::ast::stmt::Statement;
+use haikulang_parser::ast::unit::CompilationUnit;
 use haikulang_parser::lexer::token_stream::TokenStream;
 use haikulang_parser::parser::core::{Parser, ParserResult};
 use haikulang_parser::parser::error::ParserError;
 use haikulang_parser::span::Spanned;
 use std::env::args;
+use std::path::PathBuf;
 use std::process::exit;
+use std::str::FromStr;
 use std::{fs, io};
 
 fn main() {
@@ -26,10 +28,11 @@ fn main() {
     }
 }
 
-fn parse(file: &str) -> ParserResult<Statement> {
+fn parse(file: &str) -> ParserResult<CompilationUnit> {
     let tokens = TokenStream::new(file);
-    let mut parser = Parser::new(tokens);
-    parser.parse_statement()
+    let path = PathBuf::from_str(file).unwrap();
+    let mut parser = Parser::new(tokens, path.as_path());
+    parser.parse()
 }
 
 fn report_parser_error(file: &str, content: &str, parser_error: Spanned<ParserError>) {

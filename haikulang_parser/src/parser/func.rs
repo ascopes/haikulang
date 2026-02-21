@@ -8,7 +8,7 @@ impl<'src> Parser<'src> {
     // function_decl ::= FN , identifier , params , function_return_type? , block_statement     /* procedural function */
     //                 | FN , identifier , params , ASSIGN , expr_statement , semicolon         /* expression function */
     //                 ;
-    pub(super) fn parse_function_decl(&mut self) -> ParserResult<Function> {
+    pub(super) fn parse_function_decl(&mut self) -> ParserResult<FunctionDecl> {
         let start = self.eat(Token::Fn, "'fn' keyword")?;
         let name = self.parse_identifier()?;
         let parameters = self.parse_parameter_decls()?;
@@ -19,7 +19,7 @@ impl<'src> Parser<'src> {
             let end = self.eat(Token::Semicolon, "semicolon")?;
 
             return Ok(Spanned::new(
-                Function {
+                FunctionDecl {
                     name,
                     parameters,
                     return_type: None,
@@ -38,7 +38,7 @@ impl<'src> Parser<'src> {
         let span = start.span().to(body.span());
 
         Ok(Spanned::new(
-            Function {
+            FunctionDecl {
                 name,
                 parameters,
                 return_type,

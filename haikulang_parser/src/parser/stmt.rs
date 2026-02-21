@@ -8,7 +8,6 @@ impl<'src> Parser<'src> {
     // statement ::= if_statement
     //             | while_statement
     //             | block_statement
-    //             | use_statement , SEMICOLON
     //             | var_decl_statement , SEMICOLON
     //             | break_statement , SEMICOLON
     //             | continue_statement , SEMICOLON
@@ -16,13 +15,12 @@ impl<'src> Parser<'src> {
     //             | SEMICOLON
     //             | expr_statement , SEMICOLON  /* fallback */
     //             ;
-    pub fn parse_statement(&mut self) -> ParserResult<Statement> {
+    pub(super) fn parse_statement(&mut self) -> ParserResult<Statement> {
         let first = self.current()?;
         match first.value() {
             Token::If => self.parse_if_statement(),
             Token::While => self.parse_while_statement(),
             Token::LeftBrace => self.parse_block_statement(),
-            Token::Use => self.take_line_statement(Self::parse_use_statement),
             Token::Let => self.take_line_statement(Self::parse_var_decl_statement),
             Token::Break => self.take_line_statement(Self::parse_break_statement),
             Token::Continue => self.take_line_statement(Self::parse_continue_statement),
@@ -100,18 +98,6 @@ impl<'src> Parser<'src> {
             Statement::Block(Box::from(BlockStatement {
                 statements: statements.into_boxed_slice(),
             })),
-            span,
-        ))
-    }
-
-    // use_statement ::= USE , type_name ;
-    fn parse_use_statement(&mut self) -> ParserResult<Statement> {
-        let use_token = self.eat(Token::Use, "'use' keyword")?;
-        let path = self.parse_type_name()?;
-        let span = use_token.span().to(path.span());
-
-        Ok(Spanned::new(
-            Statement::Use(Box::from(UseStatement { path })),
             span,
         ))
     }
@@ -199,10 +185,7 @@ impl<'src> Parser<'src> {
     pub(super) fn parse_expr_statement(&mut self) -> ParserResult<Statement> {
         let expr = self.parse_expr()?;
         let span = expr.span();
-        Ok(Spanned::new(
-            Statement::Expr(Box::from(ExprStatement { expr })),
-            span,
-        ))
+        Ok(Spanned::new(Statement::Expr(Box::from(expr.value())), span))
     }
 
     /*

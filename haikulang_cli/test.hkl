@@ -1,33 +1,22 @@
-{
-    // use a module and import it.
-    use std;
+use std;
 
-    { ;; };;1;
+struct Factorial {
+    count: uint;
+    value: std::BigInt;
+}
 
-    let a = 1 + 2;
-    let b = 3;
-    print(a + b / (2 ** 4));
-    b = 4;
+fn factorial(n: uint) -> Factorial {
+    let value = BigInt.new(n);
+    let count = 1;
 
-    /* validate if statements work */
-    if (a * b > 32) {
-        println("foo");
-    } else if (b == 3) {
-        println("bar");
-    } else {
-        bang();
+    while (count < n) {
+        count += 1;
+        value = value.mul(count);
     }
 
-    "hello";
-    break;
-    continue;
-    return 1;
-    return;
+    return Factorial(count, value);  // todo: implement struct init syntax?
+}
 
-    /**
-     * just some nonsense
-     */
-    while (true == false) {
-        explode();
-    }
+fn main() {
+    println("{}", factorial(50));
 }

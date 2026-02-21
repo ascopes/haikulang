@@ -1,14 +1,14 @@
-use crate::ast::structs::{Struct, StructMember};
+use crate::ast::structs::{StructDecl, StructMemberDecl};
 use crate::lexer::token::Token;
 use crate::parser::core::{Parser, ParserResult};
 use crate::span::Spanned;
 
 impl<'src> Parser<'src> {
     // struct_decl ::= STRUCT , identifier , LEFT_BRACE , ( struct_member , ( COMMA , struct_member )
-    pub(super) fn parse_struct_decl(&mut self) -> ParserResult<Struct> {
+    pub(super) fn parse_struct_decl(&mut self) -> ParserResult<StructDecl> {
         let start = self.eat(Token::Struct, "'struct' keyword")?;
         let identifier = self.parse_identifier()?;
-        let mut members: Vec<Spanned<StructMember>> = Vec::new();
+        let mut members: Vec<Spanned<StructMemberDecl>> = Vec::new();
 
         self.eat(Token::LeftBrace, "left brace")?;
 
@@ -20,7 +20,7 @@ impl<'src> Parser<'src> {
         let end = self.eat(Token::RightBrace, "right brace")?;
 
         Ok(Spanned::new(
-            Struct {
+            StructDecl {
                 identifier,
                 members: Box::from(members),
             },
@@ -29,7 +29,7 @@ impl<'src> Parser<'src> {
     }
 
     // struct_member ::= identifier , COLON , type_name ;
-    fn parse_struct_member(&mut self) -> ParserResult<StructMember> {
+    fn parse_struct_member(&mut self) -> ParserResult<StructMemberDecl> {
         let identifier = self.parse_identifier()?;
         self.eat(Token::Colon, "colon")?;
         let type_name = self.parse_type_name()?;
@@ -37,7 +37,7 @@ impl<'src> Parser<'src> {
         let span = identifier.span().to(type_name.span());
 
         Ok(Spanned::new(
-            StructMember {
+            StructMemberDecl {
                 identifier,
                 type_name,
             },
