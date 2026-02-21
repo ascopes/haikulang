@@ -1,4 +1,5 @@
 use crate::ast::expr::Expr;
+use crate::ast::ident::{Identifier, TypeName};
 use crate::span::{Span, Spanned};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -30,14 +31,14 @@ impl ExprStatement {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VarDeclStatement {
-    pub identifier: Spanned<String>,
+    pub identifier: Spanned<Identifier>,
     pub expr: Option<Spanned<Expr>>,
 }
 
 impl VarDeclStatement {
     pub fn new(
         start: Span,
-        identifier: Spanned<String>,
+        identifier: Spanned<Identifier>,
         expr: Option<Spanned<Expr>>,
     ) -> Spanned<Statement> {
         let span = if let Some(spanned_expr) = &expr {
@@ -52,11 +53,11 @@ impl VarDeclStatement {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UseStatement {
-    pub path: Spanned<String>,
+    pub path: Spanned<TypeName>,
 }
 
 impl UseStatement {
-    pub fn new(start: Span, path: Spanned<String>) -> Spanned<Statement> {
+    pub fn new(start: Span, path: Spanned<TypeName>) -> Spanned<Statement> {
         let span = start.to(path.span());
         let statement = Box::new(Self { path });
         Spanned::new(Statement::Use(statement), span)

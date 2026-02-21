@@ -86,14 +86,14 @@ impl<'src> Parser<'src> {
         Ok(statement)
     }
 
-    // use_statement ::= USE , IDENTIFIER ;
+    // use_statement ::= USE , type_name ;
     fn parse_use_statement(&mut self) -> ParserResult<Statement> {
         let use_token = self.eat(|token| token == Token::Use, "'use' keyword")?;
-        let identifier = self.parse_identifier()?;
-        Ok(UseStatement::new(use_token.span(), identifier))
+        let path = self.parse_type_name()?;
+        Ok(UseStatement::new(use_token.span(), path))
     }
 
-    // var_decl_statement ::= LET , IDENTIFIER , ( EQ , expr )? ;
+    // var_decl_statement ::= LET , identifier , ( EQ , expr )? ;
     fn parse_var_decl_statement(&mut self) -> ParserResult<Statement> {
         let let_token = self.eat(|token| token == Token::Let, "'let' keyword")?;
         let identifier = self.parse_identifier()?;

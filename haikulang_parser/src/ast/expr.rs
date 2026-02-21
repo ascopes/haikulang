@@ -1,3 +1,4 @@
+use crate::ast::ident::Identifier;
 use crate::lexer::token::{FloatLit, IntLit, StrLit};
 use crate::span::{Span, Spanned};
 
@@ -12,7 +13,7 @@ pub enum Expr {
     Int(IntLit),
     Bool(bool),
     String(StrLit),
-    Identifier(StrLit),
+    Identifier(Box<Identifier>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -99,11 +100,11 @@ impl AssignmentExpr {
 #[derive(Clone, Debug, PartialEq)]
 pub struct MemberAccessExpr {
     pub owner: Spanned<Expr>,
-    pub member: Spanned<String>,
+    pub member: Spanned<Identifier>,
 }
 
 impl MemberAccessExpr {
-    pub fn new(owner: Spanned<Expr>, member: Spanned<String>) -> Spanned<Expr> {
+    pub fn new(owner: Spanned<Expr>, member: Spanned<Identifier>) -> Spanned<Expr> {
         let span = owner.span().to(member.span());
         let node = Box::new(Self { owner, member });
         Spanned::new(Expr::MemberAccess(node), span)
@@ -243,8 +244,9 @@ mod tests {
     #[test]
     fn member_access_expr_constructs_correctly() {
         // Given
-        let owner = Spanned::new(Expr::Identifier(Box::from("foo")), Span::new(3, 6));
-        let member = Spanned::new("bar".to_string(), Span::new(7, 10));
+        let identifier = Box::new(Identifier::from_str("foo"));
+        let owner = Spanned::new(Expr::Identifier(identifier.clone()), Span::new(3, 6));
+        let member = Spanned::new(Identifier::from_str("bar"), Span::new(7, 10));
 
         // When
         let expr = MemberAccessExpr::new(owner, member);
@@ -254,12 +256,12 @@ mod tests {
         match expr.value() {
             Expr::MemberAccess(boxed_expr) => {
                 match boxed_expr.owner.value() {
-                    Expr::Identifier(str) => assert_eq!(str.as_ref(), "foo"),
+                    Expr::Identifier(str) => assert_eq!(str, identifier),
                     other => panic!("Expected Identifier for member, got {:?}", other),
                 }
                 assert_eq!(boxed_expr.owner.span(), Span::new(3, 6));
 
-                assert_eq!(boxed_expr.member.value(), "bar".to_string());
+                assert_eq!(boxed_expr.member.value(), Identifier::from_str("bar"));
                 assert_eq!(boxed_expr.member.span(), Span::new(7, 10));
             }
             other => panic!("Expected MemberAccessExpr, got {:?}", other),
@@ -269,7 +271,8 @@ mod tests {
     #[test]
     fn function_call_expr_constructs_correctly() {
         // Given
-        let name = Spanned::new(Expr::Identifier(Box::from("foo")), Span::new(3, 6));
+        let identifier = Box::new(Identifier::from_str("foo"));
+        let name = Spanned::new(Expr::Identifier(identifier.clone()), Span::new(3, 6));
         let args: [Spanned<Expr>; 3] = [
             Spanned::new(Expr::Int(64), Span::new(5, 7)),
             Spanned::new(Expr::Float(69.1), Span::new(10, 13)),
@@ -290,7 +293,7 @@ mod tests {
             Expr::FunctionCall(boxed_expr) => {
                 assert_eq!(boxed_expr.name.span(), Span::new(3, 6));
                 match boxed_expr.name.value() {
-                    Expr::Identifier(name) => assert_eq!(name.as_ref(), "foo"),
+                    Expr::Identifier(name) => assert_eq!(name, identifier),
                     other => panic!("Expected Identifier for name, got {:?}", other),
                 }
 

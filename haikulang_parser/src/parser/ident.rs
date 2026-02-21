@@ -1,4 +1,4 @@
-use crate::ast::ident::TypeName;
+use crate::ast::ident::{Identifier, TypeName};
 use crate::lexer::token::Token;
 use crate::parser::core::{Parser, ParserResult};
 use crate::parser::error::ParserError;
@@ -7,7 +7,7 @@ use crate::span::Spanned;
 impl<'src> Parser<'src> {
     // type_name ::= identifier , ( DOUBLE_COLON , identifier )* ;
     pub(super) fn parse_type_name(&mut self) -> ParserResult<TypeName> {
-        let mut qualifier: Vec<Spanned<String>> = Vec::new();
+        let mut qualifier: Vec<Spanned<Identifier>> = Vec::new();
         let start = self.current()?.span();
 
         loop {
@@ -28,11 +28,14 @@ impl<'src> Parser<'src> {
     }
 
     // identifier ::= IDENTIFIER ;
-    pub(super) fn parse_identifier(&mut self) -> ParserResult<String> {
+    pub(super) fn parse_identifier(&mut self) -> ParserResult<Identifier> {
         let current = self.current()?;
         if let Token::Identifier(name) = current.value() {
             self.advance();
-            Ok(Spanned::new(name.to_string(), current.span()))
+            Ok(Spanned::new(
+                Identifier::from_boxed_str(name),
+                current.span(),
+            ))
         } else {
             Err(Spanned::new(
                 ParserError::SyntaxError("expected identifier".to_string()),

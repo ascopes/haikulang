@@ -317,11 +317,8 @@ impl<'src> Parser<'src> {
         }
 
         if matches!(first.value(), Token::Identifier(_)) {
-            let identifier = self.parse_identifier()?;
-            return Ok(Spanned::new(
-                Expr::Identifier(identifier.value().into_boxed_str()),
-                first.span(),
-            ));
+            let identifier = Box::from(self.parse_identifier()?.value());
+            return Ok(Spanned::new(Expr::Identifier(identifier), first.span()));
         }
 
         let atom = match first.value() {
