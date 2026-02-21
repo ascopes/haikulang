@@ -123,13 +123,14 @@ impl<'src> Parser<'src> {
         let let_token = self.eat(Token::Let, "'let' keyword")?;
         let identifier = self.parse_identifier()?;
 
-        let (type_name, mut span) = if self.current()?.value() == Token::Colon {
+        let (type_name, span) = if self.current()?.value() == Token::Colon {
             self.advance();
             let type_name = self.parse_type_name()?;
             let span = let_token.span().to(type_name.span());
             (Some(type_name), span)
         } else {
-            (None, let_token.span())
+            let span = let_token.span().to(identifier.span());
+            (None, span)
         };
 
         let (expr, span) = if self.current()?.value() == Token::Assign {
@@ -138,7 +139,10 @@ impl<'src> Parser<'src> {
             let span = let_token.span().to(expr.span());
             (Some(expr), span)
         } else {
-            (None, identifier.span())
+            // Use the type name span, which might just be the identifier span if no type
+            // declaration was present.
+            let span = let_token.span().to(span);
+            (None, span)
         };
 
         if type_name.is_none() && expr.is_none() {
