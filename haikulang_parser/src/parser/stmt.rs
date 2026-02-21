@@ -52,8 +52,20 @@ impl<'src> Parser<'src> {
             None
         };
 
-        let statement = IfStatement::new(if_token.span(), condition, body, otherwise);
-        Ok(statement)
+        let span = if let Some(spanned_otherwise) = &otherwise {
+            if_token.span().to(spanned_otherwise.span())
+        } else {
+            if_token.span().to(body.span())
+        };
+
+        Ok(Spanned::new(
+            Statement::If(Box::from(IfStatement {
+                condition,
+                body,
+                otherwise,
+            })),
+            span,
+        ))
     }
 
     // while_statement ::= WHILE , LEFT_PAREN , expr , RIGHT_PAREN , statement ;
@@ -63,9 +75,12 @@ impl<'src> Parser<'src> {
         let condition = self.parse_expr()?;
         self.eat(Token::RightParen, "right parenthesis")?;
         let body = self.parse_statement()?;
+        let span = while_token.span().to(body.span());
 
-        let statement = WhileStatement::new(while_token.span(), condition, body);
-        Ok(statement)
+        Ok(Spanned::new(
+            Statement::While(Box::from(WhileStatement { condition, body })),
+            span,
+        ))
     }
 
     // block_statement ::= LEFT_BRACE , statement* , RIGHT_BRACE ;
@@ -78,33 +93,47 @@ impl<'src> Parser<'src> {
         }
 
         let right_brace_token = self.eat(Token::RightBrace, "right brace")?;
-        let statement = BlockStatement::new(
-            left_brace_token.span(),
-            statements.into_boxed_slice(),
-            right_brace_token.span(),
-        );
-        Ok(statement)
+        let span = left_brace_token.span().to(right_brace_token.span());
+
+        Ok(Spanned::new(
+            Statement::Block(Box::from(BlockStatement {
+                statements: statements.into_boxed_slice(),
+            })),
+            span,
+        ))
     }
 
     // use_statement ::= USE , type_name ;
     fn parse_use_statement(&mut self) -> ParserResult<Statement> {
         let use_token = self.eat(Token::Use, "'use' keyword")?;
         let path = self.parse_type_name()?;
-        Ok(UseStatement::new(use_token.span(), path))
+        let span = use_token.span().to(path.span());
+
+        Ok(Spanned::new(
+            Statement::Use(Box::from(UseStatement { path })),
+            span,
+        ))
     }
 
-    // var_decl_statement ::= LET , identifier , ( EQ , expr )? ;
+    // TODO(ascopes): allow type names here.
+    // var_decl_statement ::= LET , identifier , ( ASSIGN , expr )? ;
     fn parse_var_decl_statement(&mut self) -> ParserResult<Statement> {
         let let_token = self.eat(Token::Let, "'let' keyword")?;
         let identifier = self.parse_identifier()?;
 
-        let expr = if self.current()?.value() == Token::Assign {
+        let (expr, span) = if self.current()?.value() == Token::Assign {
             self.advance();
-            Some(self.parse_expr()?)
+            let expr = self.parse_expr()?;
+            let span = let_token.span().to(expr.span());
+            (Some(expr), span)
         } else {
-            None
+            (None, identifier.span())
         };
-        Ok(VarDeclStatement::new(let_token.span(), identifier, expr))
+
+        Ok(Spanned::new(
+            Statement::VarDecl(Box::from(VarDeclStatement { identifier, expr })),
+            span,
+        ))
     }
 
     // break_statement ::= BREAK ;
@@ -123,19 +152,28 @@ impl<'src> Parser<'src> {
     fn parse_return_statement(&mut self) -> ParserResult<Statement> {
         let return_token = self.eat(Token::Return, "'return' keyword")?;
 
-        let expr = if self.current()?.value() != Token::Semicolon {
-            Some(self.parse_expr()?)
+        let (expr, span) = if self.current()?.value() != Token::Semicolon {
+            let expr = self.parse_expr()?;
+            let span = return_token.span().to(expr.span());
+            (Some(expr), span)
         } else {
-            None
+            (None, return_token.span())
         };
 
-        Ok(ReturnStatement::new(return_token.span(), expr))
+        Ok(Spanned::new(
+            Statement::Return(Box::from(ReturnStatement { expr })),
+            span,
+        ))
     }
 
     // expr_statement ::= expr ;
     pub(super) fn parse_expr_statement(&mut self) -> ParserResult<Statement> {
         let expr = self.parse_expr()?;
-        Ok(ExprStatement::new(expr))
+        let span = expr.span();
+        Ok(Spanned::new(
+            Statement::Expr(Box::from(ExprStatement { expr })),
+            span,
+        ))
     }
 
     /*

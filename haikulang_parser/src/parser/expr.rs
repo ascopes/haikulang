@@ -30,7 +30,7 @@ impl<'src> Parser<'src> {
     //                   | bool_or_expr
     //                   ;
     fn parse_assignment_expr(&mut self) -> ParserResult<Expr> {
-        let left = self.parse_bool_or_expr()?;
+        let lvalue = self.parse_bool_or_expr()?;
 
         let op = match self.current()?.value() {
             Token::Assign => None,
@@ -45,15 +45,21 @@ impl<'src> Parser<'src> {
             Token::BinaryXorAssign => Some(BinaryOp::BinaryXor),
             Token::BinaryShlAssign => Some(BinaryOp::BinaryShl),
             Token::BinaryShrAssign => Some(BinaryOp::BinaryShr),
-            _ => return Ok(left),
+            _ => return Ok(lvalue),
         };
         self.advance();
 
         // Verify lvalue is assignable.
         // Purposely recursive here, to force right-associativity.
         // `x = y = z = a` is parsed as `(x = (y = (z = a)))`
-        let right = self.parse_assignment_expr()?;
-        Ok(AssignmentExpr::new(left, op, right))
+        let rvalue = self.parse_assignment_expr()?;
+
+        let span = lvalue.span().to(rvalue.span());
+
+        Ok(Spanned::new(
+            Expr::Assignment(Box::new(AssignmentExpr { lvalue, op, rvalue })),
+            span,
+        ))
     }
 
     // bool_or_expr ::= bool_and_expr , BINARY_OR , bool_or_expr
@@ -220,7 +226,11 @@ impl<'src> Parser<'src> {
 
         let value = self.parse_unary_expr()?;
         let span = first.span().to(value.span());
-        Ok(UnaryExpr::new(span, op, value))
+
+        Ok(Spanned::new(
+            Expr::Unary(Box::new(UnaryExpr { op, value })),
+            span,
+        ))
     }
 
     // pow_expr ::= primary_expr , POW , pow_expr
@@ -240,7 +250,13 @@ impl<'src> Parser<'src> {
         // most of the expr grammar here, so we treat it as an edge case and do not
         // wrap it in a utility handler helper.
         let right = self.parse_pow_expr()?;
-        Ok(BinaryExpr::new(left, op, right))
+
+        let span = left.span().to(right.span());
+
+        Ok(Spanned::new(
+            Expr::Binary(Box::new(BinaryExpr { left, op, right })),
+            span,
+        ))
     }
 
     // primary_expr  ::= atom , ( selector | function_call )* ;
@@ -271,14 +287,15 @@ impl<'src> Parser<'src> {
     // arg_list      ::= expr , ( COMMA , expr )* ;
     fn parse_function_call(&mut self, name: Spanned<Expr>) -> ParserResult<Expr> {
         debug_assert_matches!(name.value(), Expr::Identifier(_) | Expr::MemberAccess(_));
-        debug_assert_matches!(self.current()?.value(), Token::LeftParen);
+
+        let left_paren = self.eat(Token::LeftParen, "left parenthesis")?;
         self.advance();
 
-        let mut args = Vec::<Spanned<Expr>>::new();
+        let mut arguments = Vec::<Spanned<Expr>>::new();
 
         // Allow zero or more arguments, which are expressions.
         while !matches!(self.current()?.value(), Token::RightParen) {
-            args.push(self.parse_expr()?);
+            arguments.push(self.parse_expr()?);
 
             if !matches!(self.current()?.value(), Token::Comma) {
                 break;
@@ -288,11 +305,14 @@ impl<'src> Parser<'src> {
         }
 
         let right_paren = self.eat(Token::RightParen, "right parenthesis")?;
+        let span = left_paren.span().to(right_paren.span());
 
-        Ok(FunctionCallExpr::new(
-            name,
-            Box::from(args),
-            right_paren.span(),
+        Ok(Spanned::new(
+            Expr::FunctionCall(Box::new(FunctionCallExpr {
+                name,
+                arguments: arguments.into_boxed_slice(),
+            })),
+            span,
         ))
     }
 
@@ -362,7 +382,12 @@ impl<'src> Parser<'src> {
                 self.advance();
                 let right = parser_fn(self)?;
 
-                left = BinaryExpr::new(left, op, right);
+                let span = left.span().to(right.span());
+
+                left = Spanned::new(
+                    Expr::Binary(Box::from(BinaryExpr { left, op, right })),
+                    span,
+                );
             } else {
                 break;
             };
