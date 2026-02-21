@@ -64,10 +64,10 @@ impl<'src> Parser<'src> {
         }
     }
 
-    // use_decl ::= USE , type_name ;
+    // use_decl ::= USE , identifier_path ;
     fn parse_use_decl(&mut self) -> ParserResult<CompilationUnitMember> {
         let use_token = self.eat(Token::Use, "'use' keyword")?;
-        let path = self.parse_type_name()?;
+        let path = self.parse_identifier_path()?;
         let span = use_token.span().to(path.span());
 
         Ok(Spanned::new(

@@ -1,5 +1,5 @@
 use crate::ast::func::*;
-use crate::ast::ident::TypeName;
+use crate::ast::ident::IdentifierPath;
 use crate::lexer::token::Token;
 use crate::parser::core::{Parser, ParserResult};
 use crate::span::Spanned;
@@ -48,10 +48,10 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    // function_return_type ::= ARROW , type_name ;
-    fn parse_function_return_type(&mut self) -> ParserResult<TypeName> {
+    // function_return_type ::= ARROW , identifier_path ;
+    fn parse_function_return_type(&mut self) -> ParserResult<IdentifierPath> {
         self.eat(Token::Arrow, "arrow")?;
-        self.parse_type_name()
+        self.parse_identifier_path()
     }
 
     // parameter_decl_list ::= LEFT_PAREN , ( parameter_decl , ( COMMA , parameter_decl )* )?, RIGHT_PAREN ;
@@ -77,12 +77,18 @@ impl<'src> Parser<'src> {
         Ok(Spanned::new(params, start.span().to(end.span())))
     }
 
-    // parameter_decl ::= identifier , COLON , type_name ;
+    // parameter_decl ::= identifier , COLON , identifier_path ;
     fn parse_parameter_decl(&mut self) -> ParserResult<ParameterDecl> {
         let name = self.parse_identifier()?;
         self.eat(Token::Colon, "colon")?;
-        let type_name = self.parse_type_name()?;
-        let span = name.span().to(type_name.span());
-        Ok(Spanned::new(ParameterDecl { name, type_name }, span))
+        let identifier_path = self.parse_identifier_path()?;
+        let span = name.span().to(identifier_path.span());
+        Ok(Spanned::new(
+            ParameterDecl {
+                name,
+                identifier_path,
+            },
+            span,
+        ))
     }
 }

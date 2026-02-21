@@ -28,18 +28,18 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    // struct_member ::= identifier , COLON , type_name ;
+    // struct_member ::= identifier , COLON , identifier_path ;
     fn parse_struct_member(&mut self) -> ParserResult<StructMemberDecl> {
         let identifier = self.parse_identifier()?;
         self.eat(Token::Colon, "colon")?;
-        let type_name = self.parse_type_name()?;
+        let identifier_path = self.parse_identifier_path()?;
 
-        let span = identifier.span().to(type_name.span());
+        let span = identifier.span().to(identifier_path.span());
 
         Ok(Spanned::new(
             StructMemberDecl {
                 identifier,
-                type_name,
+                identifier_path,
             },
             span,
         ))

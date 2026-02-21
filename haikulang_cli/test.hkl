@@ -6,7 +6,7 @@ struct Factorial {
 }
 
 fn factorial(n: uint) -> Factorial {
-    let value = BigInt.new(n);
+    let value = std::BigInt.new(n);
     let count = 1;
 
     while (count < n) {
@@ -18,5 +18,5 @@ fn factorial(n: uint) -> Factorial {
 }
 
 fn main() {
-    println("{}", factorial(50));
+    std::println("{}", factorial(50));
 }

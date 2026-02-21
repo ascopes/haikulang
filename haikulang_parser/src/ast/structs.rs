@@ -1,4 +1,4 @@
-use crate::ast::ident::{Identifier, TypeName};
+use crate::ast::ident::{Identifier, IdentifierPath};
 use crate::span::Spanned;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -10,5 +10,5 @@ pub struct StructDecl {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructMemberDecl {
     pub identifier: Spanned<Identifier>,
-    pub type_name: Spanned<TypeName>,
+    pub identifier_path: Spanned<IdentifierPath>,
 }

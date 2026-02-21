@@ -102,18 +102,18 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    // var_decl_statement ::= LET , identifier , COLON , type_name , ( ASSIGN , expr )?
+    // var_decl_statement ::= LET , identifier , COLON , identifier_path , ( ASSIGN , expr )?
     //                      | LET , identifier , ASSIGN , expr
     //                      ;
     fn parse_var_decl_statement(&mut self) -> ParserResult<Statement> {
         let let_token = self.eat(Token::Let, "'let' keyword")?;
         let identifier = self.parse_identifier()?;
 
-        let (type_name, span) = if self.current()?.value() == Token::Colon {
+        let (identifier_path, span) = if self.current()?.value() == Token::Colon {
             self.advance();
-            let type_name = self.parse_type_name()?;
-            let span = let_token.span().to(type_name.span());
-            (Some(type_name), span)
+            let identifier_path = self.parse_identifier_path()?;
+            let span = let_token.span().to(identifier_path.span());
+            (Some(identifier_path), span)
         } else {
             let span = let_token.span().to(identifier.span());
             (None, span)
@@ -131,7 +131,7 @@ impl<'src> Parser<'src> {
             (None, span)
         };
 
-        if type_name.is_none() && expr.is_none() {
+        if identifier_path.is_none() && expr.is_none() {
             return Err(Spanned::new(
                 SyntaxError(
                     "expected colon and type name or assignment in variable declaration"
@@ -144,7 +144,7 @@ impl<'src> Parser<'src> {
         Ok(Spanned::new(
             Statement::VarDecl(Box::from(VarDeclStatement {
                 identifier,
-                type_name,
+                identifier_path,
                 expr,
             })),
             span,

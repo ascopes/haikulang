@@ -1,5 +1,5 @@
 use crate::ast::expr::Expr;
-use crate::ast::ident::{Identifier, TypeName};
+use crate::ast::ident::{Identifier, IdentifierPath};
 use crate::span::Spanned;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -18,7 +18,7 @@ pub enum Statement {
 #[derive(Clone, Debug, PartialEq)]
 pub struct VarDeclStatement {
     pub identifier: Spanned<Identifier>,
-    pub type_name: Option<Spanned<TypeName>>,
+    pub identifier_path: Option<Spanned<IdentifierPath>>,
     pub expr: Option<Spanned<Expr>>,
 }
 

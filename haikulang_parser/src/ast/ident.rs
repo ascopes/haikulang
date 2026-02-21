@@ -1,7 +1,7 @@
 use crate::span::Spanned;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TypeName {
+pub struct IdentifierPath {
     pub qualifier: Box<[Spanned<Identifier>]>,
     pub local_name: Spanned<Identifier>,
 }

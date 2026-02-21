@@ -1,4 +1,4 @@
-use crate::ast::ident::Identifier;
+use crate::ast::ident::{Identifier, IdentifierPath};
 use crate::lexer::token::{FloatLit, IntLit, StrLit};
 use crate::span::Spanned;
 
@@ -13,7 +13,7 @@ pub enum Expr {
     Int(IntLit),
     Bool(bool),
     String(StrLit),
-    Identifier(Box<Identifier>),
+    IdentifierPath(Box<IdentifierPath>),
 }
 
 #[derive(Clone, Debug, PartialEq)]

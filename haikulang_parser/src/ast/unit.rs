@@ -1,5 +1,5 @@
 use crate::ast::func::FunctionDecl;
-use crate::ast::ident::TypeName;
+use crate::ast::ident::IdentifierPath;
 use crate::ast::structs::StructDecl;
 use crate::span::Spanned;
 use std::path::PathBuf;
@@ -20,5 +20,5 @@ pub enum CompilationUnitMember {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UseDecl {
-    pub path: Spanned<TypeName>,
+    pub path: Spanned<IdentifierPath>,
 }

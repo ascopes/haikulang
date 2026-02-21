@@ -275,7 +275,7 @@ impl<'src> Parser<'src> {
         Ok(expr)
     }
 
-    // selector      ::= PERIOD , IDENTIFIER ;
+    // selector      ::= PERIOD , identifier ;
     fn parse_selector(&mut self, owner: Spanned<Expr>) -> ParserResult<Expr> {
         debug_assert_matches!(self.current()?.value(), Token::Period);
         self.advance();
@@ -286,7 +286,10 @@ impl<'src> Parser<'src> {
     // function_call ::= LEFT_PAREN , arg_list , RIGHT_PAREN ;
     // arg_list      ::= expr , ( COMMA , expr )* ;
     fn parse_function_call(&mut self, name: Spanned<Expr>) -> ParserResult<Expr> {
-        debug_assert_matches!(name.value(), Expr::Identifier(_) | Expr::MemberAccess(_));
+        debug_assert_matches!(
+            name.value(),
+            Expr::IdentifierPath(_) | Expr::MemberAccess(_)
+        );
 
         let left_paren = self.eat(Token::LeftParen, "left parenthesis")?;
         self.advance();
@@ -316,7 +319,7 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    // atom ::= identifier
+    // atom ::= identifier_path
     //        | TRUE
     //        | FALSE
     //        | INT_LIT
@@ -337,8 +340,11 @@ impl<'src> Parser<'src> {
         }
 
         if matches!(first.value(), Token::Identifier(_)) {
-            let identifier = Box::from(self.parse_identifier()?.value());
-            return Ok(Spanned::new(Expr::Identifier(identifier), first.span()));
+            let identifier_path = Box::from(self.parse_identifier_path()?.value());
+            return Ok(Spanned::new(
+                Expr::IdentifierPath(identifier_path),
+                first.span(),
+            ));
         }
 
         let atom = match first.value() {

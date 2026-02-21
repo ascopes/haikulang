@@ -1,12 +1,12 @@
-use crate::ast::ident::{Identifier, TypeName};
+use crate::ast::ident::{Identifier, IdentifierPath};
 use crate::lexer::token::Token;
 use crate::parser::core::{Parser, ParserResult};
 use crate::parser::error::ParserError;
 use crate::span::Spanned;
 
 impl<'src> Parser<'src> {
-    // type_name ::= identifier , ( DOUBLE_COLON , identifier )* ;
-    pub(super) fn parse_type_name(&mut self) -> ParserResult<TypeName> {
+    // identifier_path ::= identifier , ( DOUBLE_COLON , identifier )* ;
+    pub(super) fn parse_identifier_path(&mut self) -> ParserResult<IdentifierPath> {
         let mut qualifier: Vec<Spanned<Identifier>> = Vec::new();
         let start = self.current()?.span();
 
@@ -18,11 +18,11 @@ impl<'src> Parser<'src> {
                 self.advance();
             } else {
                 let span = start.to(identifier.span());
-                let type_name = TypeName {
+                let identifier_path = IdentifierPath {
                     qualifier: Box::from(qualifier),
                     local_name: identifier,
                 };
-                return Ok(Spanned::new(type_name, span));
+                return Ok(Spanned::new(identifier_path, span));
             }
         }
     }
