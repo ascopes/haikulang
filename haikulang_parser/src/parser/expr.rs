@@ -287,7 +287,7 @@ impl<'src> Parser<'src> {
             }
         }
 
-        let right_paren = self.eat(|token| token == Token::RightParen, "right parenthesis")?;
+        let right_paren = self.eat(Token::RightParen, "right parenthesis")?;
 
         Ok(FunctionCallExpr::new(
             name,
@@ -311,7 +311,7 @@ impl<'src> Parser<'src> {
             self.advance();
 
             let expr = self.parse_expr()?;
-            self.eat(|token| token == Token::RightParen, "right parenthesis")?;
+            self.eat(Token::RightParen, "right parenthesis")?;
 
             return Ok(expr);
         }

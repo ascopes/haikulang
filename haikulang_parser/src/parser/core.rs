@@ -46,17 +46,14 @@ impl<'src> Parser<'src> {
         }
     }
 
-    // Verify the current token matches a predicate, advance the lexer, and return
+    // Verify the current token equals a given token, advance the lexer, and return
     // the verified token. If it doesn't match, then nothing is advanced, and a
     // syntax error is instead returned specifying that the current token is expected
     // to match the given string description.
     #[inline]
-    pub(super) fn eat<F>(&mut self, matcher: F, description: &str) -> ParserResult<Token>
-    where
-        F: FnOnce(Token) -> bool,
-    {
+    pub(super) fn eat(&mut self, expected_token: Token, description: &str) -> ParserResult<Token> {
         let current = self.current()?;
-        if matcher(current.value()) {
+        if current.value() == expected_token {
             self.advance();
             Ok(current)
         } else {

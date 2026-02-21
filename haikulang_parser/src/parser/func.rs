@@ -9,14 +9,14 @@ impl<'src> Parser<'src> {
     //                 | FN , identifier , params , ASSIGN , expr_statement , semicolon         /* expression function */
     //                 ;
     pub(super) fn parse_function_decl(&mut self) -> ParserResult<Function> {
-        let start = self.eat(|token| token == Token::Fn, "'fn' keyword")?;
+        let start = self.eat(Token::Fn, "'fn' keyword")?;
         let name = self.parse_identifier()?;
         let parameters = self.parse_parameter_decls()?;
 
         // We have an expression function if we have an assignment symbol.
         if self.current()?.value() == Token::Assign {
             let body = self.parse_expr_statement()?;
-            let end = self.eat(|token| token == Token::Semicolon, "semicolon")?;
+            let end = self.eat(Token::Semicolon, "semicolon")?;
 
             return Ok(Spanned::new(
                 Function {
@@ -50,13 +50,13 @@ impl<'src> Parser<'src> {
 
     // function_return_type ::= ARROW , type_name ;
     fn parse_function_return_type(&mut self) -> ParserResult<TypeName> {
-        self.eat(|token| token == Token::Arrow, "arrow")?;
+        self.eat(Token::Arrow, "arrow")?;
         self.parse_type_name()
     }
 
     // parameter_decl_list ::= LEFT_PAREN , ( parameter_decl , ( COMMA , parameter_decl )* )?, RIGHT_PAREN ;
     fn parse_parameter_decls(&mut self) -> ParserResult<Box<[Spanned<ParameterDecl>]>> {
-        let start = self.eat(|token| token == Token::LeftParen, "left parenthesis")?;
+        let start = self.eat(Token::LeftParen, "left parenthesis")?;
 
         let params = if self.current()?.value() != Token::RightParen {
             let mut params: Vec<Spanned<ParameterDecl>> = Vec::new();
@@ -72,7 +72,7 @@ impl<'src> Parser<'src> {
             Box::new([])
         };
 
-        let end = self.eat(|token| token == Token::RightParen, "right parenthesis")?;
+        let end = self.eat(Token::RightParen, "right parenthesis")?;
 
         Ok(Spanned::new(params, start.span().to(end.span())))
     }
@@ -80,7 +80,7 @@ impl<'src> Parser<'src> {
     // parameter_decl ::= identifier , COLON , type_name ;
     fn parse_parameter_decl(&mut self) -> ParserResult<ParameterDecl> {
         let name = self.parse_identifier()?;
-        self.eat(|token| token == Token::Colon, "colon")?;
+        self.eat(Token::Colon, "colon")?;
         let type_name = self.parse_type_name()?;
         let span = name.span().to(type_name.span());
         Ok(Spanned::new(ParameterDecl { name, type_name }, span))
