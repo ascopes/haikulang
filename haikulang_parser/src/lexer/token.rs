@@ -110,6 +110,9 @@ pub enum Token {
     #[token("fn")]
     Fn,
 
+    #[token("struct")]
+    Struct,
+
     #[token("return")]
     Return,
 
@@ -351,6 +354,7 @@ mod tests {
     #[test_case(    "true",              Token::True ; "true keyword")]
     #[test_case(   "false",             Token::False ; "false keyword")]
     #[test_case(      "fn",                Token::Fn ; "fn keyword")]
+    #[test_case(  "struct",            Token::Struct ; "struct keyword")]
     #[test_case(  "return",            Token::Return ; "return keyword")]
     #[test_case("continue",          Token::Continue ; "continue keyword")]
     #[test_case(   "break",             Token::Break ; "break keyword")]
