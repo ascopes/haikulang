@@ -263,7 +263,7 @@ impl<'src> Parser<'src> {
     fn parse_selector(&mut self, owner: Spanned<Expr>) -> ParserResult<Expr> {
         debug_assert_matches!(self.current()?.value(), Token::Period);
         self.advance();
-        let identifier = self.eat_identifier()?;
+        let identifier = self.parse_identifier()?;
         Ok(MemberAccessExpr::new(owner, identifier))
     }
 
@@ -296,7 +296,7 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    // atom ::= IDENTIFIER
+    // atom ::= identifier
     //        | TRUE
     //        | FALSE
     //        | INT_LIT
@@ -316,13 +316,20 @@ impl<'src> Parser<'src> {
             return Ok(expr);
         }
 
+        if matches!(first.value(), Token::Identifier(_)) {
+            let identifier = self.parse_identifier()?;
+            return Ok(Spanned::new(
+                Expr::Identifier(identifier.value().into_boxed_str()),
+                first.span(),
+            ));
+        }
+
         let atom = match first.value() {
             Token::True => Spanned::new(Expr::Bool(true), first.span()),
             Token::False => Spanned::new(Expr::Bool(false), first.span()),
             Token::IntLit(value) => Spanned::new(Expr::Int(value.clone()), first.span()),
             Token::FloatLit(value) => Spanned::new(Expr::Float(value.clone()), first.span()),
             Token::StringLit(value) => Spanned::new(Expr::String(value), first.span()),
-            Token::Identifier(value) => Spanned::new(Expr::Identifier(value), first.span()),
             _ => {
                 return Err(Spanned::new(
                     ParserError::SyntaxError(

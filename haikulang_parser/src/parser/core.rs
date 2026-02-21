@@ -66,20 +66,6 @@ impl<'src> Parser<'src> {
             ))
         }
     }
-
-    #[inline]
-    pub(super) fn eat_identifier(&mut self) -> ParserResult<String> {
-        let current = self.current()?;
-        if let Token::Identifier(name) = current.value() {
-            self.advance();
-            Ok(Spanned::new(name.to_string(), current.span()))
-        } else {
-            Err(Spanned::new(
-                ParserError::SyntaxError("expected identifier".to_string()),
-                current.span(),
-            ))
-        }
-    }
 }
 
 // Internal macro to allow asserting a token or AST matches a condition that should

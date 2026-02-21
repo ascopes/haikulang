@@ -164,6 +164,12 @@ pub enum Token {
     #[token(",")]
     Comma,
 
+    #[token(":")]
+    Colon,
+
+    #[token("::")]
+    DoubleColon,
+
     #[token("->")]
     Arrow,
 
@@ -363,6 +369,8 @@ mod tests {
     #[test_case(       "]",      Token::RightBracket ; "right bracket")]
     #[test_case(       ".",            Token::Period ; "period")]
     #[test_case(       ",",             Token::Comma ; "comma")]
+    #[test_case(       ":",             Token::Colon ; "colon")]
+    #[test_case(      "::",       Token::DoubleColon ; "double colon")]
     #[test_case(      "->",             Token::Arrow ; "arrow")]
     #[test_case(       "=",            Token::Assign ; "assignment operator")]
     #[test_case(       "+",               Token::Add ; "addition operator")]

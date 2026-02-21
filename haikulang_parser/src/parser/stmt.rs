@@ -69,7 +69,7 @@ impl<'src> Parser<'src> {
     }
 
     // block_statement ::= LEFT_BRACE , statement* , RIGHT_BRACE ;
-    fn parse_block_statement(&mut self) -> ParserResult<Statement> {
+    pub(super) fn parse_block_statement(&mut self) -> ParserResult<Statement> {
         let left_brace_token = self.eat(|token| token == Token::LeftBrace, "left brace")?;
         let mut statements = Vec::<Spanned<Statement>>::new();
 
@@ -89,14 +89,14 @@ impl<'src> Parser<'src> {
     // use_statement ::= USE , IDENTIFIER ;
     fn parse_use_statement(&mut self) -> ParserResult<Statement> {
         let use_token = self.eat(|token| token == Token::Use, "'use' keyword")?;
-        let identifier = self.eat_identifier()?;
+        let identifier = self.parse_identifier()?;
         Ok(UseStatement::new(use_token.span(), identifier))
     }
 
     // var_decl_statement ::= LET , IDENTIFIER , ( EQ , expr )? ;
     fn parse_var_decl_statement(&mut self) -> ParserResult<Statement> {
         let let_token = self.eat(|token| token == Token::Let, "'let' keyword")?;
-        let identifier = self.eat_identifier()?;
+        let identifier = self.parse_identifier()?;
 
         let expr = if self.current()?.value() == Token::Assign {
             self.advance();
@@ -132,7 +132,8 @@ impl<'src> Parser<'src> {
         Ok(ReturnStatement::new(return_token.span(), expr))
     }
 
-    fn parse_expr_statement(&mut self) -> ParserResult<Statement> {
+    // expr_statement ::= expr ;
+    pub(super) fn parse_expr_statement(&mut self) -> ParserResult<Statement> {
         let expr = self.parse_expr()?;
         Ok(ExprStatement::new(expr))
     }
