@@ -24,6 +24,7 @@ pub struct ExprStatement {
 #[derive(Clone, Debug, PartialEq)]
 pub struct VarDeclStatement {
     pub identifier: Spanned<Identifier>,
+    pub type_name: Option<Spanned<TypeName>>,
     pub expr: Option<Spanned<Expr>>,
 }
 

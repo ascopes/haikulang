@@ -1,6 +1,7 @@
 use crate::ast::stmt::*;
 use crate::lexer::token::Token;
 use crate::parser::core::{Parser, ParserResult};
+use crate::parser::error::ParserError::SyntaxError;
 use crate::span::Spanned;
 
 impl<'src> Parser<'src> {
@@ -115,11 +116,21 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    // TODO(ascopes): allow type names here.
-    // var_decl_statement ::= LET , identifier , ( ASSIGN , expr )? ;
+    // var_decl_statement ::= LET , identifier , COLON , type_name , ( ASSIGN , expr )?
+    //                      | LET , identifier , ASSIGN , expr
+    //                      ;
     fn parse_var_decl_statement(&mut self) -> ParserResult<Statement> {
         let let_token = self.eat(Token::Let, "'let' keyword")?;
         let identifier = self.parse_identifier()?;
+
+        let (type_name, mut span) = if self.current()?.value() == Token::Colon {
+            self.advance();
+            let type_name = self.parse_type_name()?;
+            let span = let_token.span().to(type_name.span());
+            (Some(type_name), span)
+        } else {
+            (None, let_token.span())
+        };
 
         let (expr, span) = if self.current()?.value() == Token::Assign {
             self.advance();
@@ -130,8 +141,22 @@ impl<'src> Parser<'src> {
             (None, identifier.span())
         };
 
+        if type_name.is_none() && expr.is_none() {
+            return Err(Spanned::new(
+                SyntaxError(
+                    "expected colon and type name or assignment in variable declaration"
+                        .to_string(),
+                ),
+                let_token.span().to(self.current()?.span()),
+            ));
+        }
+
         Ok(Spanned::new(
-            Statement::VarDecl(Box::from(VarDeclStatement { identifier, expr })),
+            Statement::VarDecl(Box::from(VarDeclStatement {
+                identifier,
+                type_name,
+                expr,
+            })),
             span,
         ))
     }
