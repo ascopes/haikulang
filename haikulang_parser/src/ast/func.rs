@@ -20,5 +20,5 @@ pub struct FunctionDecl {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParameterDecl {
     pub name: Spanned<Identifier>,
-    pub identifier_path: Spanned<IdentifierPath>,
+    pub type_name: Spanned<IdentifierPath>,
 }

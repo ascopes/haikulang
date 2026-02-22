@@ -10,5 +10,5 @@ pub struct StructDecl {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructMemberDecl {
     pub identifier: Spanned<Identifier>,
-    pub identifier_path: Spanned<IdentifierPath>,
+    pub type_name: Spanned<IdentifierPath>,
 }

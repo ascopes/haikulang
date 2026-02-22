@@ -113,7 +113,7 @@ impl<'src> Parser<'src> {
         Ok(Spanned::new(
             ParameterDecl {
                 name,
-                identifier_path,
+                type_name: identifier_path,
             },
             span,
         ))

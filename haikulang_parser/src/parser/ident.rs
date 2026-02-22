@@ -33,7 +33,9 @@ impl<'src> Parser<'src> {
         if let Token::Identifier(name) = current.value() {
             self.advance();
             Ok(Spanned::new(
-                Identifier::from_boxed_str(name),
+                Identifier {
+                    value: name.to_string(),
+                },
                 current.span(),
             ))
         } else {

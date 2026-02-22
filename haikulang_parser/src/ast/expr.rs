@@ -85,8 +85,8 @@ impl MemberAccessExpr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionCallExpr {
-    pub name: Spanned<Expr>,
-    pub arguments: Box<[Spanned<Expr>]>,
+    pub identity: Spanned<Expr>,
+    pub arguments: Spanned<Box<[Spanned<Expr>]>>,
 }
 
 #[cfg(test)]

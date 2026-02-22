@@ -39,7 +39,7 @@ impl<'src> Parser<'src> {
         Ok(Spanned::new(
             StructMemberDecl {
                 identifier,
-                identifier_path,
+                type_name: identifier_path,
             },
             span,
         ))

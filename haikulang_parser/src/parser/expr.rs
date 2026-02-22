@@ -310,8 +310,11 @@ impl<'src> Parser<'src> {
 
         Ok(Spanned::new(
             Expr::FunctionCall(Box::new(FunctionCallExpr {
-                name,
-                arguments: arguments.into_boxed_slice(),
+                identity: name,
+                arguments: Spanned::new(
+                    arguments.into_boxed_slice(),
+                    left_paren.span().to(right_paren.span()),
+                ),
             })),
             span,
         ))

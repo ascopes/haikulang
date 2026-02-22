@@ -18,7 +18,7 @@ pub enum Statement {
 #[derive(Clone, Debug, PartialEq)]
 pub struct VarDeclStatement {
     pub identifier: Spanned<Identifier>,
-    pub identifier_path: Option<Spanned<IdentifierPath>>,
+    pub type_name: Option<Spanned<IdentifierPath>>,
     pub expr: Option<Spanned<Expr>>,
 }
 

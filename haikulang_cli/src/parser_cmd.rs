@@ -1,5 +1,7 @@
 use crate::error_reporting::{report_io_error, report_source_error};
 use clap::Args;
+use haikulang_parser::ast::pretty::PrettyPrinterVisitor;
+use haikulang_parser::ast::visitor::Visitor;
 use haikulang_parser::lexer::token_stream::TokenStream;
 use haikulang_parser::parser::core::Parser;
 use std::fs::read_to_string;
@@ -20,7 +22,16 @@ pub fn invoke_parser(args: ParserCommand) {
     let mut parser = Parser::new(token_stream, path);
 
     match parser.parse() {
-        Ok(ast) => println!("{:?}", ast),
+        Ok(ast) => {
+            let mut str = String::new();
+            {
+                let mut pretty_printer = PrettyPrinterVisitor::new(&mut str);
+                pretty_printer
+                    .visit_compilation_unit(&ast.value(), ast.span())
+                    .unwrap();
+            }
+            println!("{}", str);
+        }
         Err(err) => report_source_error(path.to_str().unwrap(), &source, err),
     }
 }

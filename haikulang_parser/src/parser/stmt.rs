@@ -144,7 +144,7 @@ impl<'src> Parser<'src> {
         Ok(Spanned::new(
             Statement::VarDecl(Box::from(VarDeclStatement {
                 identifier,
-                identifier_path,
+                type_name: identifier_path,
                 expr,
             })),
             span,
