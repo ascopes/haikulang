@@ -1,78 +1,32 @@
-use ariadne::{Color, Config, Label, Report, ReportKind, Source};
-use haikulang_parser::ast::unit::CompilationUnit;
-use haikulang_parser::lexer::token_stream::TokenStream;
-use haikulang_parser::parser::core::{Parser, ParserResult};
-use haikulang_parser::parser::error::ParserError;
-use haikulang_parser::span::Spanned;
-use std::env::args;
-use std::path::{Path, PathBuf};
-use std::process::exit;
-use std::str::FromStr;
-use std::{fs, io, path};
+mod error_reporting;
+mod lexer_cmd;
+mod parser_cmd;
+
+use clap::{Parser, Subcommand};
+
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+#[command(propagate_version = true)]
+struct MainCommand {
+    // The command to invoke.
+    #[command(subcommand)]
+    command: MainSubCommand,
+}
+
+#[derive(Subcommand)]
+enum MainSubCommand {
+    /// Invoke the lexer across a given file and show the token stream output.
+    Lexer(lexer_cmd::LexerCommand),
+
+    /// Invoke the parser across a given file and show the AST output.
+    Parser(parser_cmd::ParserCommand),
+}
 
 fn main() {
-    let files: Vec<String> = args().skip(1).collect();
+    let cli = MainCommand::parse();
 
-    if files.is_empty() {
-        report_no_args();
+    match cli.command {
+        MainSubCommand::Lexer(args) => lexer_cmd::invoke_lexer(args),
+        MainSubCommand::Parser(args) => parser_cmd::invoke_parser(args),
     }
-
-    for file in files {
-        let path = path::absolute(PathBuf::from_str(&file).unwrap()).unwrap();
-        match fs::read_to_string(&path) {
-            Ok(content) => match parse(&path, content.as_str()) {
-                Ok(ast) => println!("{:?}", ast),
-                Err(err) => report_parser_error(file.as_str(), content.as_str(), err),
-            },
-            Err(err) => report_io_error(file.as_str(), err),
-        }
-    }
-}
-
-fn parse(path: &Path, content: &str) -> ParserResult<CompilationUnit> {
-    let tokens = TokenStream::new(content);
-    let mut parser = Parser::new(tokens, path);
-    parser.parse()
-}
-
-fn report_parser_error(file: &str, content: &str, parser_error: Spanned<ParserError>) {
-    Report::build(ReportKind::Error, (file, parser_error.span().range()))
-        .with_message(format!("File {} contains errors", file))
-        .with_label(
-            Label::new((file, parser_error.span().range()))
-                .with_message(format!("{}", parser_error.value()))
-                .with_color(Color::BrightRed),
-        )
-        .with_config(
-            Config::new()
-                .with_compact(false)
-                .with_tab_width(4)
-                .with_multiline_arrows(true)
-                .with_underlines(true),
-        )
-        .finish()
-        .print((file, Source::from(content)))
-        .unwrap();
-    exit(3);
-}
-
-fn report_io_error(file: &str, error: io::Error) {
-    Report::build(ReportKind::Error, (file, 0..0))
-        .with_message(format!("IO error reading {}: {}", file, error))
-        .with_config(
-            Config::new()
-                .with_compact(false)
-                .with_tab_width(4)
-                .with_multiline_arrows(true)
-                .with_underlines(true),
-        )
-        .finish()
-        .print((file, Source::from("")))
-        .unwrap();
-    exit(2);
-}
-
-fn report_no_args() {
-    eprintln!("No files were provided in arguments");
-    exit(1);
 }

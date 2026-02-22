@@ -1,5 +1,5 @@
 [package]
-name = "haikulang_cli"
+name = "haikulang_llvm"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,9 +7,13 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-ariadne = { workspace = true, features = ["auto-color"] }
-clap = { features = ["derive"], workspace = true }
 haikulang_parser = { path = "../haikulang_parser" }
+#inkwell = { features = ["llvm21-1"], workspace = true }
+
+[dev-dependencies]
+test-case.workspace = true
+
+[lib]
 
 [lints]
 workspace = true

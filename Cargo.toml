@@ -1,13 +1,25 @@
 [workspace]
 members = [
     "haikulang_cli",
+    "haikulang_llvm",
     "haikulang_parser",
 ]
 resolver = "3"
 
 [workspace.dependencies]
+# Used for pretty error messages
 ariadne = "0.6.0"
+
+# Command line parsing
+clap = "4.5.60"
+
+# LLVM bindings
+inkwell = "0.8.0"
+
+# Lexer generation
 logos = "0.16.1"
+
+# Parameterized tests
 test-case = "3.3.1"
 
 [workspace.package]

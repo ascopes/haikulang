@@ -11,7 +11,7 @@ impl<'src> Parser<'src> {
     //  This should be slightly less verbose, remove code duplication, and should
     //  help avoid stack overflows on heavily nested expressions.
     #[allow(dead_code)]
-    pub fn parse_expr(&mut self) -> ParserResult<Expr> {
+    pub(super) fn parse_expr(&mut self) -> ParserResult<Expr> {
         self.parse_assignment_expr()
     }
 
