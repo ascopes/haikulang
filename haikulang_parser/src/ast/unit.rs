@@ -1,4 +1,4 @@
-use crate::ast::func::FunctionDecl;
+use crate::ast::func::{ExternFunctionDecl, FunctionDecl};
 use crate::ast::ident::IdentifierPath;
 use crate::ast::structs::StructDecl;
 use crate::span::Spanned;
@@ -14,6 +14,7 @@ pub struct CompilationUnit {
 #[derive(Clone, Debug, PartialEq)]
 pub enum CompilationUnitMember {
     Use(Box<UseDecl>),
+    ExternFunction(Box<ExternFunctionDecl>),
     Function(Box<FunctionDecl>),
     Struct(Box<StructDecl>),
 }

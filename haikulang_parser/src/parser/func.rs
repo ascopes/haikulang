@@ -5,6 +5,33 @@ use crate::parser::core::{Parser, ParserResult};
 use crate::span::Spanned;
 
 impl<'src> Parser<'src> {
+    // extern_function_decl ::= FN , identifier , params , function_return_type? ;
+    pub(super) fn parse_extern_function_decl(&mut self) -> ParserResult<ExternFunctionDecl> {
+        let start = self.eat(Token::Extern, "'extern' keyword")?;
+        self.eat(Token::Fn, "'fn' keyword")?;
+        let name = self.parse_identifier()?;
+        let parameters = self.parse_parameter_decls()?;
+
+        let (return_type, end_span) = if self.current()?.value() == Token::Arrow {
+            let return_type = self.parse_function_return_type()?;
+            let span = return_type.span();
+            (Some(return_type), span)
+        } else {
+            (None, parameters.span())
+        };
+
+        let span = start.span().to(end_span);
+
+        Ok(Spanned::new(
+            ExternFunctionDecl {
+                name,
+                parameters,
+                return_type,
+            },
+            span,
+        ))
+    }
+
     // function_decl ::= FN , identifier , params , function_return_type? , block_statement     /* procedural function */
     //                 | FN , identifier , params , ASSIGN , expr_statement , semicolon         /* expression function */
     //                 ;

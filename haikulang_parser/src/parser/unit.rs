@@ -39,6 +39,15 @@ impl<'src> Parser<'src> {
                 self.eat(Token::Semicolon, "semicolon")?;
                 use_decl
             },
+            Token::Extern => {
+                let extern_func_decl = self.parse_extern_function_decl()?;
+                self.eat(Token::Semicolon, "semicolon")?;
+                let span = extern_func_decl.span();
+                Ok(Spanned::new(
+                    CompilationUnitMember::ExternFunction(Box::from(extern_func_decl.value())),
+                    span
+                ))
+            },
             Token::Fn => {
                 let func_decl = self.parse_function_decl()?;
                 let span = func_decl.span();

@@ -107,6 +107,9 @@ pub enum Token {
     #[token("false")]
     False,
 
+    #[token("extern")]
+    Extern,
+
     #[token("fn")]
     Fn,
 
@@ -353,6 +356,7 @@ mod tests {
 
     #[test_case(    "true",              Token::True ; "true keyword")]
     #[test_case(   "false",             Token::False ; "false keyword")]
+    #[test_case(  "extern",            Token::Extern ; "extern keyword")]
     #[test_case(      "fn",                Token::Fn ; "fn keyword")]
     #[test_case(  "struct",            Token::Struct ; "struct keyword")]
     #[test_case(  "return",            Token::Return ; "return keyword")]

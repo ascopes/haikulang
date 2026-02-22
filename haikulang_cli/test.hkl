@@ -8,6 +8,8 @@ struct Factorial {
     value: std::BigInt;
 }
 
+extern fn println(fmt: string, value: std::BigInt);
+
 fn factorial(n: uint) -> Factorial {
     let value = std::BigInt.new(n);
     let count = 1;
