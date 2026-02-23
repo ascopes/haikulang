@@ -8,6 +8,7 @@ pub enum Expr {
     Unary(Box<UnaryExpr>),
     Assignment(Box<AssignmentExpr>),
     MemberAccess(Box<MemberAccessExpr>),
+    Index(Box<IndexExpr>),
     FunctionCall(Box<FunctionCallExpr>),
     Float(FloatLit),
     Int(IntLit),
@@ -73,6 +74,12 @@ pub struct AssignmentExpr {
 pub struct MemberAccessExpr {
     pub owner: Spanned<Expr>,
     pub member: Spanned<Identifier>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct IndexExpr {
+    pub owner: Spanned<Expr>,
+    pub index: Spanned<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

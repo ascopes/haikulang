@@ -1,4 +1,6 @@
-use crate::ast::expr::{AssignmentExpr, BinaryExpr, FunctionCallExpr, MemberAccessExpr, UnaryExpr};
+use crate::ast::expr::{
+    AssignmentExpr, BinaryExpr, FunctionCallExpr, IndexExpr, MemberAccessExpr, UnaryExpr,
+};
 use crate::ast::func::{ExternFunctionDecl, FunctionDecl, ParameterDecl};
 use crate::ast::ident::{Identifier, IdentifierPath};
 use crate::ast::stmt::{
@@ -143,6 +145,17 @@ impl<'write> Visitor<(), fmt::Error> for PrettyPrinterVisitor<'write> {
 
             visitor.write_prefix("member: ")?;
             visitor.visit_identifier(&node.member.value(), node.member.span())?;
+            Ok(())
+        })
+    }
+
+    fn visit_index_expr(&mut self, node: &IndexExpr, span: Span) -> PrettyPrinterResult {
+        self.block("IndexExpr", span, |visitor| {
+            visitor.write_prefix("owner: ")?;
+            visitor.visit_expr(&node.owner.value(), node.owner.span())?;
+
+            visitor.write_prefix("index: ")?;
+            visitor.visit_expr(&node.index.value(), node.index.span())?;
             Ok(())
         })
     }

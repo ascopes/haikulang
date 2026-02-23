@@ -1,5 +1,5 @@
 use crate::ast::expr::{
-    AssignmentExpr, BinaryExpr, Expr, FunctionCallExpr, MemberAccessExpr, UnaryExpr,
+    AssignmentExpr, BinaryExpr, Expr, FunctionCallExpr, IndexExpr, MemberAccessExpr, UnaryExpr,
 };
 use crate::ast::func::{ExternFunctionDecl, FunctionDecl, ParameterDecl};
 use crate::ast::ident::{Identifier, IdentifierPath};
@@ -21,6 +21,7 @@ pub trait Visitor<R, E> {
             Expr::Unary(inner) => self.visit_unary_expr(inner, span),
             Expr::Assignment(inner) => self.visit_assignment_expr(inner, span),
             Expr::MemberAccess(inner) => self.visit_member_access_expr(inner, span),
+            Expr::Index(inner) => self.visit_index_expr(inner, span),
             Expr::FunctionCall(inner) => self.visit_function_call_expr(inner, span),
             Expr::Float(inner) => self.visit_float_lit(inner, span),
             Expr::Int(inner) => self.visit_int_lit(inner, span),
@@ -38,6 +39,7 @@ pub trait Visitor<R, E> {
         node: &MemberAccessExpr,
         span: Span,
     ) -> VisitorResult<R, E>;
+    fn visit_index_expr(&mut self, node: &IndexExpr, span: Span) -> VisitorResult<R, E>;
     fn visit_function_call_expr(
         &mut self,
         node: &FunctionCallExpr,

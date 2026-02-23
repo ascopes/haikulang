@@ -259,15 +259,16 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    // primary_expr  ::= atom , ( selector | function_call )* ;
+    // primary_expr  ::= atom , ( member_access_expr | index_expr | function_call_expr )* ;
     fn parse_primary_expr(&mut self) -> ParserResult<Expr> {
         let mut expr = self.parse_atom()?;
 
         // Consume chained calls and selectors
         loop {
-            match self.current()?.value() {
-                Token::Period => expr = self.parse_member_access_expr(expr)?,
-                Token::LeftParen => expr = self.parse_function_call(expr)?,
+            expr = match self.current()?.value() {
+                Token::Period => self.parse_member_access_expr(expr)?,
+                Token::LeftBracket => self.parse_index_expr(expr)?,
+                Token::LeftParen => self.parse_function_call(expr)?,
                 _ => break,
             }
         }
@@ -283,6 +284,19 @@ impl<'src> Parser<'src> {
         let span = owner.span().to(member.span());
         Ok(Spanned::new(
             Expr::MemberAccess(Box::new(MemberAccessExpr { owner, member })),
+            span,
+        ))
+    }
+
+    // index_expr ::= LEFT_BRACKET , expr , RIGHT_BRACKET ;
+    fn parse_index_expr(&mut self, owner: Spanned<Expr>) -> ParserResult<Expr> {
+        debug_assert_matches!(self.current()?.value(), Token::LeftBracket);
+        self.advance();
+        let index = self.parse_expr()?;
+        let right_sq = self.eat(Token::RightBracket, "right square bracket")?;
+        let span = owner.span().to(right_sq.span());
+        Ok(Spanned::new(
+            Expr::Index(Box::new(IndexExpr { owner, index })),
             span,
         ))
     }

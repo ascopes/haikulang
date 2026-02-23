@@ -24,4 +24,7 @@ fn factorial(n: uint) -> Factorial {
 
 fn main() {
     std::println("{}", factorial(50));
+    let arr = Array::new(12);
+    arr[6] = 12;
+    std::println(arr[6]);
 }
