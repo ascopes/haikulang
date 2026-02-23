@@ -5,7 +5,7 @@ use crate::parser::error::ParserError;
 use crate::span::Spanned;
 use std::path::Path;
 
-impl<'src> Parser<'src> {
+impl<'src, 'err> Parser<'src, 'err> {
     // compilation_unit ::= compilation_unit_member* , EOF ;
     pub(super) fn parse_compilation_unit(&mut self, path: &Path) -> ParserResult<CompilationUnit> {
         let start = self.current()?.span();
@@ -38,38 +38,42 @@ impl<'src> Parser<'src> {
                 let use_decl = self.parse_use_decl();
                 self.eat(Token::Semicolon, "semicolon")?;
                 use_decl
-            },
+            }
             Token::Extern => {
                 let extern_func_decl = self.parse_extern_function_decl()?;
                 self.eat(Token::Semicolon, "semicolon")?;
                 let span = extern_func_decl.span();
                 Ok(Spanned::new(
                     CompilationUnitMember::ExternFunction(Box::from(extern_func_decl.value())),
-                    span
+                    span,
                 ))
-            },
+            }
             Token::Fn => {
                 let func_decl = self.parse_function_decl()?;
                 let span = func_decl.span();
                 Ok(Spanned::new(
                     CompilationUnitMember::Function(Box::from(func_decl.value())),
-                    span
+                    span,
                 ))
-            },
+            }
             Token::Struct => {
                 let func_decl = self.parse_struct_decl()?;
                 let span = func_decl.span();
                 Ok(Spanned::new(
                     CompilationUnitMember::Struct(Box::from(func_decl.value())),
-                    span
+                    span,
                 ))
-            },
-            _ => Err(Spanned::new(
-                ParserError::SyntaxError(
-                    "expected a top-level declaration (use statement, function declaration, or struct declaration)".to_string(),
-                ),
-                self.current()?.span(),
-            ))
+            }
+            _ => {
+                let span = self.current()?.span();
+                self.report_error(
+                    ParserError::SyntaxError(
+                        "expected a top-level declaration (use statement, function declaration, or struct declaration)".to_string(),
+                    ),
+                    span
+                );
+                Err(())
+            }
         }
     }
 

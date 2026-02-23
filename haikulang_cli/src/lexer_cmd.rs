@@ -1,4 +1,3 @@
-use crate::error_reporting::{report_io_error, report_source_error};
 use clap::Args;
 use haikulang_parser::lexer::token::Token;
 use haikulang_parser::lexer::token_stream::TokenStream;
@@ -12,10 +11,7 @@ pub struct LexerCommand {
 
 pub fn invoke_lexer(args: LexerCommand) {
     let path = args.file.as_path();
-    let source = match read_to_string(path) {
-        Ok(source) => source,
-        Err(err) => report_io_error(path.to_str().unwrap(), err),
-    };
+    let source = read_to_string(path).unwrap();
     let mut token_stream = TokenStream::new(&source);
 
     loop {
@@ -29,7 +25,7 @@ pub fn invoke_lexer(args: LexerCommand) {
                     token_stream.advance();
                 }
             }
-            Err(err) => report_source_error(path.to_str().unwrap(), &source, err),
+            Err(err) => panic!("{:?}", err),
         }
     }
 }

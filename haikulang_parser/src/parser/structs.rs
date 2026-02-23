@@ -3,7 +3,7 @@ use crate::lexer::token::Token;
 use crate::parser::core::{Parser, ParserResult};
 use crate::span::Spanned;
 
-impl<'src> Parser<'src> {
+impl<'src, 'err> Parser<'src, 'err> {
     // struct_decl ::= STRUCT , identifier , LEFT_BRACE , ( struct_member , ( COMMA , struct_member )
     pub(super) fn parse_struct_decl(&mut self) -> ParserResult<StructDecl> {
         let start = self.eat(Token::Struct, "'struct' keyword")?;

@@ -4,7 +4,7 @@ use crate::parser::core::{Parser, ParserResult};
 use crate::parser::error::ParserError;
 use crate::span::Spanned;
 
-impl<'src> Parser<'src> {
+impl<'src, 'err> Parser<'src, 'err> {
     // identifier_path ::= identifier , ( DOUBLE_COLON , identifier )* ;
     pub(super) fn parse_identifier_path(&mut self) -> ParserResult<IdentifierPath> {
         let mut qualifier: Vec<Spanned<Identifier>> = Vec::new();
@@ -39,10 +39,11 @@ impl<'src> Parser<'src> {
                 current.span(),
             ))
         } else {
-            Err(Spanned::new(
+            self.report_error(
                 ParserError::SyntaxError("expected identifier".to_string()),
                 current.span(),
-            ))
+            );
+            Err(())
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::error_reporting::{report_io_error, report_source_error};
+use crate::error_reporting::AriadneErrorReporter;
 use clap::Args;
 use haikulang_parser::ast::pretty::PrettyPrinterVisitor;
 use haikulang_parser::ast::visitor::Visitor;
@@ -6,6 +6,7 @@ use haikulang_parser::lexer::token_stream::TokenStream;
 use haikulang_parser::parser::core::Parser;
 use std::fs::read_to_string;
 use std::path::PathBuf;
+use std::process::exit;
 
 #[derive(Args)]
 pub struct ParserCommand {
@@ -14,12 +15,10 @@ pub struct ParserCommand {
 
 pub fn invoke_parser(args: ParserCommand) {
     let path = args.file.as_path();
-    let source = match read_to_string(path) {
-        Ok(source) => source,
-        Err(err) => report_io_error(path.to_str().unwrap(), err),
-    };
+    let source = read_to_string(path).unwrap();
     let token_stream = TokenStream::new(&source);
-    let mut parser = Parser::new(token_stream, path);
+    let mut error_reporter = AriadneErrorReporter::new();
+    let mut parser = Parser::new(token_stream, path, &mut error_reporter);
 
     match parser.parse() {
         Ok(ast) => {
@@ -32,6 +31,11 @@ pub fn invoke_parser(args: ParserCommand) {
             }
             println!("{}", str);
         }
-        Err(err) => report_source_error(path.to_str().unwrap(), &source, err),
+        // Errors imply reporting took place, handle that below.
+        Err(()) => {}
+    };
+
+    if error_reporter.print(path.to_str().unwrap(), &source) {
+        exit(2);
     }
 }

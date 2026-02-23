@@ -4,7 +4,7 @@ use crate::lexer::token::Token;
 use crate::parser::core::{Parser, ParserResult};
 use crate::span::Spanned;
 
-impl<'src> Parser<'src> {
+impl<'src, 'err> Parser<'src, 'err> {
     // extern_function_decl ::= FN , identifier , params , function_return_type? ;
     pub(super) fn parse_extern_function_decl(&mut self) -> ParserResult<ExternFunctionDecl> {
         let start = self.eat(Token::Extern, "'extern' keyword")?;

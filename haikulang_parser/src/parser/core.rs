@@ -1,35 +1,54 @@
 use crate::ast::unit::CompilationUnit;
 use crate::lexer::token::Token;
 use crate::lexer::token_stream::TokenStream;
-use crate::parser::error::ParserError;
-use crate::span::Spanned;
+use crate::parser::error::{ErrorReporter, ParserError};
+use crate::span::{Span, Spanned};
 use std::path::Path;
 
-pub type ParserResult<T> = Result<Spanned<T>, Spanned<ParserError>>;
+pub type ParserResult<T> = Result<Spanned<T>, ()>;
 
-pub struct Parser<'src> {
+pub struct Parser<'src, 'err> {
     stream: TokenStream<'src>,
     path: &'src Path,
+    error_reporter: &'err mut dyn ErrorReporter,
 }
 
-impl<'src> Parser<'src> {
-    pub fn new(stream: TokenStream<'src>, path: &'src Path) -> Self {
-        let mut parser = Self { stream, path };
-        parser.consume_comments();
-        parser
+impl<'src, 'err> Parser<'src, 'err> {
+    pub fn new(
+        stream: TokenStream<'src>,
+        path: &'src Path,
+        error_reporter: &'err mut impl ErrorReporter,
+    ) -> Self {
+        Self {
+            stream,
+            path,
+            error_reporter,
+        }
     }
 
     pub fn parse(&mut self) -> ParserResult<CompilationUnit> {
+        self.consume_comments();
         self.parse_compilation_unit(self.path)
+    }
+
+    // Report an error.
+    #[inline]
+    pub(super) fn report_error(&mut self, error: ParserError, span: Span) {
+        self.error_reporter.report(error, span);
     }
 
     // Return a copy of the current token within the lexer.
     #[inline]
     pub(super) fn current(&mut self) -> ParserResult<Token> {
-        self.stream.current().map_err(|err| {
-            let new_err = ParserError::LexerError(err.value().clone());
-            Spanned::new(new_err, err.span())
-        })
+        match self.stream.current() {
+            Ok(token) => Ok(token),
+            Err(err) => {
+                let span = err.span();
+                let new_err = ParserError::LexerError(err.value());
+                self.report_error(new_err, span);
+                Err(())
+            }
+        }
     }
 
     // Advance the lexer to the next token.
@@ -64,10 +83,11 @@ impl<'src> Parser<'src> {
             self.advance();
             Ok(current)
         } else {
-            Err(Spanned::new(
+            self.report_error(
                 ParserError::SyntaxError(format!("expected {}", description)),
                 current.span(),
-            ))
+            );
+            Err(())
         }
     }
 }

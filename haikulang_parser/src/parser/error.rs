@@ -1,5 +1,10 @@
 use crate::lexer::error::LexerError;
+use crate::span::Span;
 use std::fmt::{Display, Formatter};
+
+pub trait ErrorReporter {
+    fn report(&mut self, error: ParserError, span: Span);
+}
 
 #[derive(Clone, Debug)]
 pub enum ParserError {

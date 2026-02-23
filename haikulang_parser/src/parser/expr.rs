@@ -6,7 +6,7 @@ use crate::parser::error::ParserError;
 use crate::span::Spanned;
 
 //noinspection DuplicatedCode
-impl<'src> Parser<'src> {
+impl<'src, 'err> Parser<'src, 'err> {
     // FIXME(ascopes): consolidate expression parsing into a Pratt parser.
     //  This should be slightly less verbose, remove code duplication, and should
     //  help avoid stack overflows on heavily nested expressions.
@@ -373,13 +373,14 @@ impl<'src> Parser<'src> {
             Token::FloatLit(value) => Spanned::new(Expr::Float(value.clone()), first.span()),
             Token::StringLit(value) => Spanned::new(Expr::String(value), first.span()),
             _ => {
-                return Err(Spanned::new(
+                self.report_error(
                     ParserError::SyntaxError(
                         "expected atom (literal, identifier, or expression within parenthesis)"
                             .to_string(),
                     ),
                     first.span(),
-                ));
+                );
+                return Err(());
             }
         };
 
