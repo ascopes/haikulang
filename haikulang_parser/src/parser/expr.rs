@@ -266,7 +266,7 @@ impl<'src> Parser<'src> {
         // Consume chained calls and selectors
         loop {
             match self.current()?.value() {
-                Token::Period => expr = self.parse_selector(expr)?,
+                Token::Period => expr = self.parse_member_access_expr(expr)?,
                 Token::LeftParen => expr = self.parse_function_call(expr)?,
                 _ => break,
             }
@@ -275,12 +275,16 @@ impl<'src> Parser<'src> {
         Ok(expr)
     }
 
-    // selector      ::= PERIOD , identifier ;
-    fn parse_selector(&mut self, owner: Spanned<Expr>) -> ParserResult<Expr> {
+    // member_access_expr ::= PERIOD , identifier ;
+    fn parse_member_access_expr(&mut self, owner: Spanned<Expr>) -> ParserResult<Expr> {
         debug_assert_matches!(self.current()?.value(), Token::Period);
         self.advance();
-        let identifier = self.parse_identifier()?;
-        Ok(MemberAccessExpr::new(owner, identifier))
+        let member = self.parse_identifier()?;
+        let span = owner.span().to(member.span());
+        Ok(Spanned::new(
+            Expr::MemberAccess(Box::new(MemberAccessExpr { owner, member })),
+            span,
+        ))
     }
 
     // function_call ::= LEFT_PAREN , arg_list , RIGHT_PAREN ;

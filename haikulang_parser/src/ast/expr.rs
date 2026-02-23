@@ -75,14 +75,6 @@ pub struct MemberAccessExpr {
     pub member: Spanned<Identifier>,
 }
 
-impl MemberAccessExpr {
-    pub fn new(owner: Spanned<Expr>, member: Spanned<Identifier>) -> Spanned<Expr> {
-        let span = owner.span().to(member.span());
-        let node = Box::new(Self { owner, member });
-        Spanned::new(Expr::MemberAccess(node), span)
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionCallExpr {
     pub identity: Spanned<Expr>,
