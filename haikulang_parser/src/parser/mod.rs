@@ -1,8 +1,8 @@
 pub mod core;
 pub mod error;
-pub mod expr;
-pub mod func;
-pub mod ident;
-pub mod stmt;
-pub mod structs;
+mod expr;
+mod func;
+mod ident;
+mod stmt;
+mod structs;
 mod unit;
