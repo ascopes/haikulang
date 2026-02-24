@@ -1,7 +1,7 @@
 use crate::ast::unit::{CompilationUnit, CompilationUnitMember, UseDecl};
+use crate::error::{ParserError, ParserResult};
 use crate::lexer::token::Token;
-use crate::parser::core::{Parser, ParserResult};
-use crate::parser::error::ParserError;
+use crate::parser::core::Parser;
 use crate::span::Spanned;
 use std::path::Path;
 
@@ -66,13 +66,14 @@ impl<'src, 'err> Parser<'src, 'err> {
             }
             _ => {
                 let span = self.current()?.span();
-                self.report_error(
+                let err = Spanned::new(
                     ParserError::SyntaxError(
                         "expected a top-level declaration (use statement, function declaration, or struct declaration)".to_string(),
                     ),
                     span
                 );
-                Err(())
+                self.report_error(&err);
+                Err(err)
             }
         }
     }

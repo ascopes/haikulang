@@ -1,5 +1,5 @@
-use super::error::LexerError;
-use super::helpers::*;
+use crate::error::ParserError;
+use crate::lexer::helpers::*;
 use logos::Logos;
 
 pub type IntLit = u64;
@@ -7,7 +7,7 @@ pub type FloatLit = f64;
 pub type StrLit = Box<str>;
 
 #[derive(Clone, Debug, Logos, PartialEq)]
-#[logos(error(LexerError, parse_unknown_input))]
+#[logos(error(ParserError, parse_unknown_input))]
 #[logos(skip "[ \n\r\t]+")]
 #[logos(utf8 = true)]
 pub enum Token {

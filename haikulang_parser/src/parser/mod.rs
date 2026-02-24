@@ -1,5 +1,4 @@
 pub mod core;
-pub mod error;
 mod expr;
 mod func;
 mod ident;

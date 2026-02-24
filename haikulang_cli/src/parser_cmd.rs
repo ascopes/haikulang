@@ -32,7 +32,7 @@ pub fn invoke_parser(args: ParserCommand) {
             println!("{}", str);
         }
         // Errors imply reporting took place, handle that below.
-        Err(()) => {}
+        Err(err) => eprintln!("Encountered an error {}", err.value()),
     };
 
     if error_reporter.print(path.to_str().unwrap(), &source) {

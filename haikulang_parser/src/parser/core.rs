@@ -1,11 +1,9 @@
 use crate::ast::unit::CompilationUnit;
+use crate::error::{ErrorReporter, ParserError, ParserResult};
 use crate::lexer::token::Token;
 use crate::lexer::token_stream::TokenStream;
-use crate::parser::error::{ErrorReporter, ParserError};
-use crate::span::{Span, Spanned};
+use crate::span::Spanned;
 use std::path::Path;
-
-pub type ParserResult<T> = Result<Spanned<T>, ()>;
 
 pub struct Parser<'src, 'err> {
     stream: TokenStream<'src>,
@@ -33,8 +31,8 @@ impl<'src, 'err> Parser<'src, 'err> {
 
     // Report an error.
     #[inline]
-    pub(super) fn report_error(&mut self, error: ParserError, span: Span) {
-        self.error_reporter.report(error, span);
+    pub(super) fn report_error(&mut self, error: &Spanned<ParserError>) {
+        self.error_reporter.report(error);
     }
 
     // Return a copy of the current token within the lexer.
@@ -43,10 +41,8 @@ impl<'src, 'err> Parser<'src, 'err> {
         match self.stream.current() {
             Ok(token) => Ok(token),
             Err(err) => {
-                let span = err.span();
-                let new_err = ParserError::LexerError(err.value());
-                self.report_error(new_err, span);
-                Err(())
+                self.report_error(&err);
+                Err(err)
             }
         }
     }
@@ -83,11 +79,12 @@ impl<'src, 'err> Parser<'src, 'err> {
             self.advance();
             Ok(current)
         } else {
-            self.report_error(
+            let err = Spanned::new(
                 ParserError::SyntaxError(format!("expected {}", description)),
                 current.span(),
             );
-            Err(())
+            self.report_error(&err);
+            Err(err)
         }
     }
 }

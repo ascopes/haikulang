@@ -1,13 +1,11 @@
-use crate::lexer::error::LexerError;
+use crate::error::ParserResult;
 use crate::lexer::token::Token;
 use crate::span::{Span, Spanned};
 use logos::{Logos, SpannedIter};
 
-type LexerResult = Result<Spanned<Token>, Spanned<LexerError>>;
-
 pub struct TokenStream<'src> {
     iter: SpannedIter<'src, Token>,
-    next: LexerResult,
+    next: ParserResult<Token>,
 }
 
 impl<'src> TokenStream<'src> {
@@ -21,11 +19,11 @@ impl<'src> TokenStream<'src> {
         self.next = Self::take_next(&mut self.iter);
     }
 
-    pub fn current(&mut self) -> Result<Spanned<Token>, Spanned<LexerError>> {
+    pub fn current(&mut self) -> ParserResult<Token> {
         self.next.clone()
     }
 
-    fn take_next(iter: &mut SpannedIter<'src, Token>) -> LexerResult {
+    fn take_next(iter: &mut SpannedIter<'src, Token>) -> ParserResult<Token> {
         let result = iter.next();
         match result {
             Some((result, span)) => {

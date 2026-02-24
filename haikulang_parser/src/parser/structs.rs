@@ -1,6 +1,7 @@
 use crate::ast::structs::{StructDecl, StructMemberDecl};
+use crate::error::ParserResult;
 use crate::lexer::token::Token;
-use crate::parser::core::{Parser, ParserResult};
+use crate::parser::core::Parser;
 use crate::span::Spanned;
 
 impl<'src, 'err> Parser<'src, 'err> {

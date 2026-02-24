@@ -1,9 +1,9 @@
 use ariadne::{Color, Config, Label, Report, ReportKind, Source};
-use haikulang_parser::parser::error::{ErrorReporter, ParserError};
-use haikulang_parser::span::Span;
+use haikulang_parser::error::{ErrorReporter, ParserError};
+use haikulang_parser::span::Spanned;
 
 pub struct AriadneErrorReporter {
-    errors: Vec<(ParserError, Span)>,
+    errors: Vec<Spanned<ParserError>>,
 }
 
 impl AriadneErrorReporter {
@@ -26,9 +26,9 @@ impl AriadneErrorReporter {
                     .with_underlines(true),
             );
 
-        for (error, span) in &self.errors {
-            let label = Label::new((file, span.range()))
-                .with_message(format!("{}", error))
+        for error in &self.errors {
+            let label = Label::new((file, error.span().range()))
+                .with_message(format!("{}", error.value()))
                 .with_color(Color::BrightRed);
             reporter = reporter.with_label(label);
         }
@@ -43,7 +43,7 @@ impl AriadneErrorReporter {
 }
 
 impl ErrorReporter for AriadneErrorReporter {
-    fn report(&mut self, error: ParserError, span: Span) {
-        self.errors.push((error, span));
+    fn report(&mut self, error: &Spanned<ParserError>) {
+        self.errors.push(error.clone());
     }
 }

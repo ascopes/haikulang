@@ -1,10 +1,12 @@
-use crate::lexer::error::LexerError;
+use crate::error::ParserError;
 use crate::lexer::token::{FloatLit, IntLit, StrLit, Token};
 use std::str::FromStr;
 
-pub fn parse_unknown_input(lex: &mut logos::Lexer<Token>) -> LexerError {
+type HelperResult<T> = Result<T, ParserError>;
+
+pub fn parse_unknown_input(lex: &mut logos::Lexer<Token>) -> ParserError {
     let text = &lex.slice()[lex.span()];
-    LexerError::UnknownToken(text.to_string())
+    ParserError::UnknownToken(text.to_string())
 }
 
 pub fn parse_inline_comment(lex: &mut logos::Lexer<Token>) -> StrLit {
@@ -23,11 +25,11 @@ pub fn parse_identifier(lex: &mut logos::Lexer<Token>) -> StrLit {
     Box::from(lex.slice())
 }
 
-pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StrLit, LexerError> {
+pub fn parse_string(lex: &mut logos::Lexer<Token>) -> HelperResult<StrLit> {
     let unparsed = lex.slice();
 
     if !unparsed.ends_with('"') {
-        return Err(LexerError::UnclosedStringLit(unparsed.to_string()));
+        return Err(ParserError::UnclosedStringLit(unparsed.to_string()));
     }
 
     let mut parsed = String::new();
@@ -45,17 +47,17 @@ pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StrLit, LexerError>
             }
             c => match c.chars().nth(0).unwrap() {
                 '\n' => {
-                    return Err(LexerError::InvalidStringLit(
+                    return Err(ParserError::InvalidStringLit(
                         "unexpected line feed encountered".to_string(),
                     ));
                 }
                 '\r' => {
-                    return Err(LexerError::InvalidStringLit(
+                    return Err(ParserError::InvalidStringLit(
                         "unexpected carriage return encountered".to_string(),
                     ));
                 }
                 c if c.is_control() => {
-                    return Err(LexerError::InvalidStringLit(format!(
+                    return Err(ParserError::InvalidStringLit(format!(
                         "unexpected control byte sequence encountered: {}",
                         c.escape_unicode(),
                     )));
@@ -71,7 +73,7 @@ pub fn parse_string(lex: &mut logos::Lexer<Token>) -> Result<StrLit, LexerError>
     Ok(parsed.into_boxed_str())
 }
 
-fn parse_string_escape_char(text: &str, offset: usize) -> Result<(&str, usize), LexerError> {
+fn parse_string_escape_char(text: &str, offset: usize) -> HelperResult<(&str, usize)> {
     // In theory this could be malformed, but we validate the format for the most part in the regex
     // before getting this far, so we can make assumptions here.
     match &text[offset..offset + 1] {
@@ -85,20 +87,20 @@ fn parse_string_escape_char(text: &str, offset: usize) -> Result<(&str, usize), 
             let bytes = codepoint_string.as_bytes();
             match str::from_utf8(bytes) {
                 Ok(utf8_char) => Ok((utf8_char, 5)),
-                Err(err) => Err(LexerError::InvalidStringLit(format!(
+                Err(err) => Err(ParserError::InvalidStringLit(format!(
                     "failed to parse invalid unicode codepoint \\u{}: {}",
                     codepoint_string, err
                 ))),
             }
         }
-        other => Err(LexerError::InvalidStringLit(format!(
+        other => Err(ParserError::InvalidStringLit(format!(
             "unknown escape sequence in string: \\{}",
             other.escape_default()
         ))),
     }
 }
 
-pub fn parse_int_lit(lex: &mut logos::Lexer<Token>) -> Result<IntLit, LexerError> {
+pub fn parse_int_lit(lex: &mut logos::Lexer<Token>) -> HelperResult<IntLit> {
     let text = lex.slice();
 
     if text.starts_with("0b") || text.starts_with("0B") {
@@ -112,25 +114,25 @@ pub fn parse_int_lit(lex: &mut logos::Lexer<Token>) -> Result<IntLit, LexerError
     }
 }
 
-fn parse_int_lit_radix(text: &str, radix: u32) -> Result<IntLit, LexerError> {
+fn parse_int_lit_radix(text: &str, radix: u32) -> HelperResult<IntLit> {
     // Remove any underscores, we do not keep them in the final value.
     // In theory this could be malformed, but we validate the format in the regex before
     // getting this far.
     IntLit::from_str_radix(text.replace("_", "").as_str(), radix).map_err(|err| {
-        LexerError::InvalidIntLit(format!(
+        ParserError::InvalidIntLit(format!(
             "failed to parse base-{} value {:?}: {}",
             radix, text, err
         ))
     })
 }
 
-pub fn parse_float_lit(lex: &mut logos::Lexer<Token>) -> Result<FloatLit, LexerError> {
+pub fn parse_float_lit(lex: &mut logos::Lexer<Token>) -> HelperResult<FloatLit> {
     // Remove any underscores, we do not keep them in the final value.
     // In theory this could be malformed, but we validate the format in the regex before
     // getting this far.
     let text = lex.slice();
     FloatLit::from_str(text.replace("_", "").as_str()).map_err(|err| {
-        LexerError::InvalidFloatLit(format!(
+        ParserError::InvalidFloatLit(format!(
             "failed to parse base-10 float value {:?}: {}",
             text, err
         ))

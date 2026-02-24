@@ -4,7 +4,8 @@ fn main() {
     let output = std::process::Command::new("llvm-config")
         .arg("--prefix")
         .output()
-        .expect(r#"
+        .expect(
+            r#"
             Failed to run llvm-config. Is llvm-devel installed?
 
             Try one of the following:
@@ -17,7 +18,8 @@ fn main() {
                   chmod +x llvm.sh
                   sudo ./llvm.sh 21
                   rm llvm.sh
-        "#);
+        "#,
+        );
 
     let prefix = std::str::from_utf8(&output.stdout).unwrap().trim();
 
@@ -32,7 +34,10 @@ fn main() {
     // This turns "21.x.x" into "LLVM_SYS_211_PREFIX"
     // No idea if the dangling 1 actually matters. Probably does, but I lack the brains to
     // work out how to make this work nicely without summoning lucifer
-    println!("cargo:rustc-env=LLVM_SYS_{}1_PREFIX={}", major_version, prefix);
+    println!(
+        "cargo:rustc-env=LLVM_SYS_{}1_PREFIX={}",
+        major_version, prefix
+    );
 
     println!("cargo:rustc-link-search=native={}/lib", prefix);
 }

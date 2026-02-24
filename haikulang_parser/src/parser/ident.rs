@@ -1,7 +1,7 @@
 use crate::ast::ident::{Identifier, IdentifierPath};
+use crate::error::{ParserError, ParserResult};
 use crate::lexer::token::Token;
-use crate::parser::core::{Parser, ParserResult};
-use crate::parser::error::ParserError;
+use crate::parser::core::Parser;
 use crate::span::Spanned;
 
 impl<'src, 'err> Parser<'src, 'err> {
@@ -39,11 +39,12 @@ impl<'src, 'err> Parser<'src, 'err> {
                 current.span(),
             ))
         } else {
-            self.report_error(
+            let err = Spanned::new(
                 ParserError::SyntaxError("expected identifier".to_string()),
                 current.span(),
             );
-            Err(())
+            self.report_error(&err);
+            Err(err)
         }
     }
 }

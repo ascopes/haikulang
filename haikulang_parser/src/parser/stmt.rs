@@ -1,7 +1,7 @@
 use crate::ast::stmt::*;
+use crate::error::{ParserError, ParserResult};
 use crate::lexer::token::Token;
-use crate::parser::core::{Parser, ParserResult};
-use crate::parser::error::ParserError::SyntaxError;
+use crate::parser::core::Parser;
 use crate::span::Spanned;
 
 impl<'src, 'err> Parser<'src, 'err> {
@@ -133,14 +133,15 @@ impl<'src, 'err> Parser<'src, 'err> {
 
         if identifier_path.is_none() && expr.is_none() {
             let span = let_token.span().to(self.current()?.span());
-            self.report_error(
-                SyntaxError(
+            let err = Spanned::new(
+                ParserError::SyntaxError(
                     "expected colon and type name or assignment in variable declaration"
                         .to_string(),
                 ),
                 span,
             );
-            return Err(());
+            self.report_error(&err);
+            return Err(err);
         }
 
         Ok(Spanned::new(

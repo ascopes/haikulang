@@ -1,8 +1,8 @@
 use crate::ast::expr::*;
 use crate::debug_assert_matches;
+use crate::error::{ParserError, ParserResult};
 use crate::lexer::token::Token;
-use crate::parser::core::{Parser, ParserResult};
-use crate::parser::error::ParserError;
+use crate::parser::core::Parser;
 use crate::span::Spanned;
 
 //noinspection DuplicatedCode
@@ -373,14 +373,15 @@ impl<'src, 'err> Parser<'src, 'err> {
             Token::FloatLit(value) => Spanned::new(Expr::Float(value.clone()), first.span()),
             Token::StringLit(value) => Spanned::new(Expr::String(value), first.span()),
             _ => {
-                self.report_error(
+                let err = Spanned::new(
                     ParserError::SyntaxError(
                         "expected atom (literal, identifier, or expression within parenthesis)"
                             .to_string(),
                     ),
                     first.span(),
                 );
-                return Err(());
+                self.report_error(&err);
+                return Err(err);
             }
         };
 
