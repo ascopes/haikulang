@@ -10,10 +10,10 @@ pub enum Expr {
     MemberAccess(Box<MemberAccessExpr>),
     Index(Box<IndexExpr>),
     FunctionCall(Box<FunctionCallExpr>),
-    Float(FloatLit),
-    Int(IntLit),
-    Bool(bool),
-    String(StrLit),
+    Float(Box<FloatLitExpr>),
+    Int(Box<IntLitExpr>),
+    Bool(Box<BoolLitExpr>),
+    String(Box<StrLitExpr>),
     IdentifierPath(Box<IdentifierPath>),
 }
 
@@ -86,6 +86,26 @@ pub struct IndexExpr {
 pub struct FunctionCallExpr {
     pub identity: Spanned<Expr>,
     pub arguments: Spanned<Box<[Spanned<Expr>]>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FloatLitExpr {
+    pub value: FloatLit,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct IntLitExpr {
+    pub value: IntLit,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoolLitExpr {
+    pub value: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct StrLitExpr {
+    pub value: StrLit,
 }
 
 #[cfg(test)]

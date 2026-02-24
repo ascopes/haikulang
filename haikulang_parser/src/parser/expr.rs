@@ -5,7 +5,6 @@ use crate::lexer::token::Token;
 use crate::parser::core::Parser;
 use crate::span::Spanned;
 
-//noinspection DuplicatedCode
 impl<'src, 'err> Parser<'src, 'err> {
     // FIXME(ascopes): consolidate expression parsing into a Pratt parser.
     //  This should be slightly less verbose, remove code duplication, and should
@@ -367,11 +366,23 @@ impl<'src, 'err> Parser<'src, 'err> {
         }
 
         let atom = match first.value() {
-            Token::True => Spanned::new(Expr::Bool(true), first.span()),
-            Token::False => Spanned::new(Expr::Bool(false), first.span()),
-            Token::IntLit(value) => Spanned::new(Expr::Int(value.clone()), first.span()),
-            Token::FloatLit(value) => Spanned::new(Expr::Float(value.clone()), first.span()),
-            Token::StringLit(value) => Spanned::new(Expr::String(value), first.span()),
+            Token::True => Spanned::new(
+                Expr::Bool(Box::from(BoolLitExpr { value: true })),
+                first.span(),
+            ),
+            Token::False => Spanned::new(
+                Expr::Bool(Box::from(BoolLitExpr { value: false })),
+                first.span(),
+            ),
+            Token::IntLit(value) => {
+                Spanned::new(Expr::Int(Box::from(IntLitExpr { value })), first.span())
+            }
+            Token::FloatLit(value) => {
+                Spanned::new(Expr::Float(Box::from(FloatLitExpr { value })), first.span())
+            }
+            Token::StringLit(value) => {
+                Spanned::new(Expr::String(Box::from(StrLitExpr { value })), first.span())
+            }
             _ => {
                 let err = Spanned::new(
                     ParserError::SyntaxError(
