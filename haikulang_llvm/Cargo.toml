@@ -8,7 +8,7 @@ version.workspace = true
 
 [dependencies]
 haikulang_parser = { path = "../haikulang_parser" }
-#inkwell = { features = ["llvm21-1"], workspace = true }
+inkwell = { features = ["llvm21-1-force-static"], workspace = true }
 
 [dev-dependencies]
 test-case.workspace = true
