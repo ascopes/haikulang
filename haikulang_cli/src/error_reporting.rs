@@ -16,27 +16,27 @@ impl AriadneErrorReporter {
             return false;
         }
 
-        let mut reporter = Report::build(ReportKind::Error, (file, (0..content.len())))
-            .with_message(format!("File {} contains errors", file))
-            .with_config(
-                Config::new()
-                    .with_compact(false)
-                    .with_tab_width(4)
-                    .with_multiline_arrows(true)
-                    .with_underlines(true),
-            );
-
         for error in &self.errors {
-            let label = Label::new((file, error.span().range()))
+            let mut reporter = Report::build(ReportKind::Error, (file, error.span().range()))
                 .with_message(format!("{}", error.value()))
+                .with_config(
+                    Config::new()
+                        .with_compact(false)
+                        .with_tab_width(4)
+                        .with_multiline_arrows(true)
+                        .with_underlines(true),
+                );
+
+            let label = Label::new((file, error.span().range()))
+                .with_message("error occurred here!")
                 .with_color(Color::BrightRed);
             reporter = reporter.with_label(label);
-        }
 
-        reporter
-            .finish()
-            .print((file, Source::from(content)))
-            .unwrap();
+            reporter
+                .finish()
+                .print((file, Source::from(content)))
+                .unwrap();
+        }
 
         return true;
     }
