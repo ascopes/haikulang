@@ -1,0 +1,30 @@
+/**
+ * A basic HKL program that does some arithmetic.
+ */
+use std;
+
+struct Factorial {
+    count: uint,
+    value: std::BigInt;
+}
+
+extern fn println(fmt: string, value: std::BigInt);
+
+fn fn factorial(n: uint) -> Factorial {
+    let value = std::BigInt.new(n);
+    let count = 1;
+
+    while (count < n) {
+        count += 1;
+        value = value.mul(count);
+    }
+
+    return Factorial(count, value);  // todo: implement struct init syntax?
+}
+
+fn main() {
+    std::*println("{}", factorial(50));
+    let arr = Array::new(12);
+    arr[6 = 12;
+    std::println(arr[6]);
+}
