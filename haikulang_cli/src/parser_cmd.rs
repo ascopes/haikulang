@@ -1,7 +1,5 @@
 use crate::error_reporting::AriadneErrorReporter;
 use clap::Args;
-use haikulang_parser::ast::pretty::PrettyPrinterVisitor;
-use haikulang_parser::ast::visitor::Visitor;
 use haikulang_parser::lexer::token_stream::TokenStream;
 use haikulang_parser::parser::core::Parser;
 use std::fs::read_to_string;
@@ -21,16 +19,7 @@ pub fn invoke_parser(args: ParserCommand) {
     let mut parser = Parser::new(token_stream, path, &mut error_reporter);
 
     match parser.parse() {
-        Ok(ast) => {
-            let mut str = String::new();
-            {
-                let mut pretty_printer = PrettyPrinterVisitor::new(&mut str);
-                pretty_printer
-                    .visit_compilation_unit(&ast.value(), ast.span())
-                    .unwrap();
-            }
-            println!("{}", str);
-        }
+        Ok(ast) => println!("{:#?}", ast),
         // Errors imply reporting took place, handle that below.
         Err(err) => eprintln!("Encountered an error {}", err.value()),
     };
