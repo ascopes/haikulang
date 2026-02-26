@@ -1,6 +1,6 @@
 use haikulang_parser::ast::expr::{BoolLitExpr, Expr, FloatLitExpr, IntLitExpr, StrLitExpr};
 use haikulang_parser::span::{Span, Spanned};
-use inkwell::values::{AnyValue, BasicValue};
+use inkwell::values::BasicValue;
 use inkwell::{context, values};
 
 pub struct Compiler<'ctx> {
@@ -36,7 +36,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub fn visit_bool_lit_expr(&self, value: &BoolLitExpr, span: Span) -> values::IntValue<'ctx> {
+    pub fn visit_bool_lit_expr(&self, value: &BoolLitExpr, _span: Span) -> values::IntValue<'ctx> {
         self.context
             .bool_type()
             .const_int(if value.value { 1 } else { 0 }, false)
@@ -45,16 +45,16 @@ impl<'ctx> Compiler<'ctx> {
     pub fn visit_float_lit_expr(
         &self,
         value: &FloatLitExpr,
-        span: Span,
+        _span: Span,
     ) -> values::FloatValue<'ctx> {
         self.context.f64_type().const_float(value.value)
     }
 
-    pub fn visit_int_lit_expr(&self, value: &IntLitExpr, span: Span) -> values::IntValue<'ctx> {
+    pub fn visit_int_lit_expr(&self, value: &IntLitExpr, _span: Span) -> values::IntValue<'ctx> {
         self.context.i64_type().const_int(value.value, true)
     }
 
-    pub fn visit_str_lit_expr(&self, value: &StrLitExpr, span: Span) -> values::ArrayValue<'ctx> {
+    pub fn visit_str_lit_expr(&self, value: &StrLitExpr, _span: Span) -> values::ArrayValue<'ctx> {
         self.context.const_string(value.value.as_bytes(), true)
     }
 }

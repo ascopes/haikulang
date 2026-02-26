@@ -1,11 +1,10 @@
 use crate::error_reporting::AriadneErrorReporter;
 use clap::Args;
-use haikulang_llvm::codegen::{Compiler, test_codegen};
+use haikulang_llvm::codegen::test_codegen;
 use haikulang_parser::lexer::token_stream::TokenStream;
 use haikulang_parser::parser::core::Parser;
 use std::fs::read_to_string;
-use std::path::{PathBuf, PrefixComponent};
-use std::process::exit;
+use std::path::PathBuf;
 
 #[derive(Args)]
 pub struct LlvmCommand {
