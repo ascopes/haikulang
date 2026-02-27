@@ -184,12 +184,12 @@ version = "0.0.0"
 dependencies = [
  "ariadne",
  "clap",
- "haikulang_llvm",
+ "haikulang_compiler",
  "haikulang_parser",
 ]
 
 [[package]]
-name = "haikulang_llvm"
+name = "haikulang_compiler"
 version = "0.0.0"
 dependencies = [
  "haikulang_parser",

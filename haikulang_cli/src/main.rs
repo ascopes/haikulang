@@ -1,6 +1,5 @@
 mod error_reporting;
 mod lexer_cmd;
-mod llvm_cmd;
 mod parser_cmd;
 
 use clap::{Parser, Subcommand};
@@ -21,9 +20,6 @@ enum MainSubCommand {
 
     /// Invoke the parser across a given file and show the AST output.
     Parser(parser_cmd::ParserCommand),
-
-    /// Compile a file to LLVM bytecode.
-    Llvm(llvm_cmd::LlvmCommand),
 }
 
 fn main() {
@@ -32,6 +28,5 @@ fn main() {
     match cli.command {
         MainSubCommand::Lexer(args) => lexer_cmd::invoke_lexer(args),
         MainSubCommand::Parser(args) => parser_cmd::invoke_parser(args),
-        MainSubCommand::Llvm(args) => llvm_cmd::invoke_llvm(args),
     }
 }

@@ -9,7 +9,7 @@ version.workspace = true
 [dependencies]
 ariadne = { workspace = true, features = ["auto-color"] }
 clap = { features = ["derive"], workspace = true }
-haikulang_llvm = { path = "../haikulang_llvm" }
+haikulang_compiler = { path = "../haikulang_compiler" }
 haikulang_parser = { path = "../haikulang_parser" }
 
 [lints]

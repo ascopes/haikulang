@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "haikulang_cli",
-    "haikulang_llvm",
+    "haikulang_compiler",
     "haikulang_parser",
 ]
 resolver = "3"

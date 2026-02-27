@@ -38,7 +38,7 @@ impl AriadneErrorReporter {
                 .unwrap();
         }
 
-        return true;
+        true
     }
 }
 
