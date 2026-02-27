@@ -1,5 +1,5 @@
 use crate::ast::ident::{Identifier, IdentifierPath};
-use crate::lexer::token::{FloatLit, IntLit, StrLit};
+use crate::lexer::literals::{FloatLit, IntLit, StrLit};
 use crate::span::Spanned;
 
 #[derive(Clone, Debug, PartialEq)]
