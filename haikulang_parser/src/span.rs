@@ -8,13 +8,12 @@ pub struct Span {
 }
 
 impl Span {
-    pub fn new(start: usize, end: usize) -> Self {
-        debug_assert!(
-            start <= end,
-            "span start ({}) was greater than span end ({})",
-            start,
-            end
-        );
+    // Special sentinel value that should never be reachable. Used elsewhere to describe
+    // synthetic constructs that we may generate in later stages of compilation such as HIR
+    // lowering.
+    pub const UNSET: Self = Span::new(usize::MAX, usize::MAX);
+
+    pub const fn new(start: usize, end: usize) -> Self {
         Self { start, end }
     }
 
@@ -33,11 +32,19 @@ impl Span {
     pub fn range(&self) -> Range<usize> {
         self.start..self.end
     }
+
+    pub fn is_unset(self) -> bool {
+        self == Self::UNSET
+    }
 }
 
 impl fmt::Display for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.start, self.end)
+        if self.is_unset() {
+            write!(f, "unset")
+        } else {
+            write!(f, "{}:{}", self.start, self.end)
+        }
     }
 }
 
@@ -64,6 +71,7 @@ impl<T: Clone> Spanned<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     #[test]
     fn span_constructs_correctly() {
@@ -105,13 +113,11 @@ mod tests {
         assert_eq!(range, 19..27);
     }
 
-    #[test]
-    fn span_formats_correctly() {
-        // Given
-        let span = Span::new(19, 27);
-
+    #[test_case(Span::new(19, 27), "19:27" ; "regular span")]
+    #[test_case(      Span::UNSET, "unset" ; "unset span")]
+    fn span_formats_correctly(span: Span, expected: &str) {
         // Then
-        assert_eq!(format!("{}", span), "19:27");
+        assert_eq!(format!("{}", span), expected);
     }
 
     #[test]
