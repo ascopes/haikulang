@@ -5,6 +5,7 @@ use crate::hir::nodes::{
 use crate::hir::sym::SymbolTable;
 use haikulang_parser::ast::func::FunctionDecl;
 
+/// Module-level context for global symbols and interning.
 #[derive(Debug)]
 pub struct HirModuleContext {
     pub(crate) string_interner: InterningArena<HirString>,
@@ -21,8 +22,8 @@ impl HirModuleContext {
         }
     }
 
-    // Inject the functions into this module context so we are aware of them ahead of time, allowing
-    // us to refer to things further down the AST later.
+    /// Inject the functions into this module context so we are aware of them ahead of time, allowing
+    /// us to refer to things further down the AST later.
     pub fn pre_scan(&mut self, functions: &[FunctionDecl]) {
         for function in functions {
             let identifier_id = self.string_interner.intern(function.name.value().value);

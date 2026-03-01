@@ -1,3 +1,5 @@
+//! Definitions of common HIR node types describing various instructions and
+//! language constructs.
 use crate::hir::arena;
 use crate::hir::context::HirFunctionContext;
 use haikulang_parser::span::Span;

@@ -28,6 +28,9 @@ impl<T: Clone + Eq + Hash> InterningArena<T> {
         }
     }
 
+    /// Intern the given value if it is not already interned. Return
+    /// the arena ID for the interned value (may be an existing ID if the
+    /// given value was already interned from a previous call).
     pub fn intern(&mut self, value: T) -> Id<T> {
         if let Some(id) = self.id_mapping.get(&value) {
             *id
@@ -38,6 +41,9 @@ impl<T: Clone + Eq + Hash> InterningArena<T> {
         }
     }
 
+    /// Get the interned data defined by the given ID. If the ID does not
+    /// correspond to an interned item, then this will panic (but this should
+    /// not ever be possible!)
     pub fn get(&self, id: Id<T>) -> &T {
         &self.arena[id]
     }
